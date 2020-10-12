@@ -1,0 +1,138 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <div data-search=""
+         role-search-select-value="{$select_fields}"
+         role-search-select-text="{$select_values}"
+         role-search-action="{$url.self}">
+        <div role-search="content-left">
+            <div class="form-group">
+                <select class="form-control" name="static[pay_type]">
+                    <option value="0">不限类型</option>
+                    {$type_options}
+                </select>
+            </div>
+            <div class="form-group">
+                <select class="form-control" name="static[status]">
+                    <option value="0">不限状态</option>
+                    <option value="1">已支付</option>
+                    <option value="2">未支付</option>
+                </select>
+            </div>
+            <eq name="time_range_status" value="1">
+                <div class="form-group">
+                    <div class="input-group">
+                        <input type="text" class="form-control" size="{$time_range_size}" data-date="{$time_range_format}"  name="static[start_time]" placeholder="开始时间" value="{$time_range_start_time}"/>
+                        <div class="input-group-addon">
+                            <i class="icon icon-calendar"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="input-group">
+                        <input type="text" class="form-control" size="{$time_range_size}" data-date="{$time_range_format}"  name="static[end_time]" placeholder="结束时间" value="{$time_range_end_time}"/>
+                        <div class="input-group-addon">
+                            <i class="icon icon-calendar"></i>
+                        </div>
+                    </div>
+                </div>
+            </eq>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover table-striped">
+            <thead>
+            <tr>
+                <th class="text-center" width="40">ID</th>
+                <th class="text-center">支付描述</th>
+                <th class="text-center" width="80">创建时间</th>
+                <th class="text-center" width="80">支付金额</th>
+                <th class="text-center" width="80">是否支付</th>
+                <th class="text-center" width="80">订单状态</th>
+                <th class="text-center" width="100">所属会员</th>
+            </tr>
+            </thead>
+            <tbody>
+            <empty name="list">
+                <tr>
+                    <th colspan="16" class="empty-info">暂无相关数据</th>
+                </tr>
+                <else/>
+                <foreach name="list" item="vo" key="i">
+                    <tr class="text-center">
+                        <td>{$vo.id}</td>
+                        <td class="text-left text-vtop">
+                            <div class="text-muted">
+                                <b>商品描述：</b>
+                                {$vo.title}
+                            </div>
+                            <div class="text-muted">
+                                <b>支付单号：</b>
+                                {$vo.pay_trade_no}
+                            </div>
+                            <div class="text-muted">
+                                <b>业务单号：</b>
+                                {$vo.order_trade_no}
+                            </div>
+                            <eq name="vo.is_pay" value="1">
+                                <div class="text-muted">
+                                    <b>三方单号：</b>
+                                    <code>{$vo.pay_type_name}</code> {$vo.api_trade_no}
+                                </div>
+                            </eq>
+                            <eq name="vo.order_fail" value="1">
+                                <div class="text-red">
+                                    <b>操作失败：</b>
+                                    {$vo.order_status_remark}
+                                </div>
+                            </eq>
+                        </td>
+                        <td class="text-gray text-vtop">{$vo.format_create_time}</td>
+                        <td class="text-vtop text-red">
+                            <b>￥{$vo.price}</b>
+                            <div>{$vo.pay_name}</div>
+                        </td>
+                        <td class="text-vtop">
+                            <eq name="vo.is_pay" value="1">
+                                <span class="text text-success">
+                                    <b>￥{$vo.api_price}</b>
+                                    <div>
+                                        <i class="icon icon-check-circle-o"></i>
+                                        <b>已支付</b>
+                                    </div>
+                                    
+                                </span>
+                                <else/>
+                                待支付
+                            </eq>
+                        </td>
+                        <td class="text-vtop">
+                            <eq name="vo.is_pay" value="1">
+                                <eq name="vo.order_success" value="1">
+                                    <span class="label label-success">成功</span>
+                                    <div class="space-2"></div>
+                                    <div class="text-success">{$vo.format_pay_time}</div>
+                                </eq>
+                                <eq name="vo.order_fail" value="1">
+                                    <span class="label label-danger">失败</span>
+                                    <div class="space-2"></div>
+                                    <div class="text-danger">{$vo.format_pay_time}</div>
+                                </eq>
+                                <else/>
+                                --
+                            </eq>
+                        </td>
+                        <td class="text-vtop">
+                            {$vo.show_user|default="会员信息异常"}
+                        </td>
+                    </tr>
+                </foreach>
+            </empty>
+            </tbody>
+        </table>
+    </div>
+    {$page}
+</block>
+<block name="foot">
+    <admin:js type="date"/>
+</block>
