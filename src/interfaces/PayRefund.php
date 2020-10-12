@@ -3,6 +3,7 @@
 namespace BusyPHP\trade\interfaces;
 
 use BusyPHP\exception\AppException;
+use BusyPHP\trade\model\pay\TradePayField;
 
 /**
  * 支付退款接口类，所有支付退款都应该集成该接口
