@@ -3,6 +3,7 @@
 namespace BusyPHP\trade\interfaces;
 
 use BusyPHP\exception\AppException;
+use Exception;
 
 /**
  * 支付关联订单接口，所有依赖支付的订单都需要集成该接口
@@ -16,31 +17,29 @@ interface PayOrder
      * 获取支付需要的数据
      * @param string $orderTradeNo 业务订单号
      * @return PayOrderPayData
-     * @throws AppException
+     * @throws Exception
      */
-    public function getPayData($orderTradeNo);
+    public function getPayData($orderTradeNo) : PayOrderPayData;
     
     
     /**
-     * 将订单设为支付成功
+     * 将订单设为支付成功，内部不要启用事物
      * @param string $orderTradeNo 业务订单号
      * @param int    $payId 支付订单ID
      * @param string $payTradeNo 支付订单交易号
      * @param float  $payPrice 实际支付金额
-     * @return false|true 返回false代表已经支付过，返回true代表操作成功
-     * @throws AppException
+     * @return bool 返回false代表已经支付过，返回true代表操作成功
+     * @throws Exception
      */
-    public function setPaySuccess($orderTradeNo, $payId, $payTradeNo, $payPrice);
+    public function setPaySuccess($orderTradeNo, $payId, $payTradeNo, $payPrice) : bool;
     
     
     /**
-     * 设置订单退款状态
-     * @param string $payTradeNo 平台支付订单号
-     * @param int    $payId 平台支付ID
+     * 设置订单退款状态，内部不要启用事物
+     * @param string $orderTradeNo 业务订单号
      * @param bool   $status 退款状态，成功还是失败
-     * @param string $customParam 自定义业务参数 todo ?
-     * @param string $remark 退款备注，如失败原因
-     * @throws AppException
+     * @param string $statusRemark 退款状态原因，成功为退款退入的账户信息，失败为失败原因
+     * @throws Exception
      */
-    public function setRefundStatus($payTradeNo, $payId, $status, $customParam = '', $remark = '');
+    public function setRefundStatus($orderTradeNo, bool $status, $statusRemark = '');
 }

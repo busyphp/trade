@@ -8,7 +8,7 @@
 
 return [
     // 后台配置
-    'admin'           => [
+    'admin'             => [
         // 支付订单页面配置
         'pay' => [
             // 菜单配置
@@ -61,16 +61,22 @@ return [
     ],
     
     // 指定支付订单需要的的会员模型
-    'trade_member'    => '会员模型类，必须集成 BusyPHP\trade\interfaces\TradeMemberModel',
+    'trade_member'      => '会员模型类，必须集成 BusyPHP\trade\interfaces\TradeMemberModel',
     
     // 支付订单号前缀
-    'trade_no_prefix' => 1001,
+    'trade_no_prefix'   => 1001,
     
     // 接收异步或同步请求的时候获取支付类型的参数键
-    'var_pay_type'    => 'pay_type',
+    'var_pay_type'      => 'pay_type',
+    
+    // 退款订单号前缀
+    'refund_no_prefix'  => 1002,
+    
+    // 退款异步通知地址，需要添加http或https前缀，其中，__TYPE__ 为支付类型变量
+    'refund_notify_url' => 'http://域名/refund/pay_type/__TYPE__',
     
     // 业务订单模型绑定
-    'models'          => [
+    'models'            => [
         // 订单号前缀(int) => [
         //     'model'   => 业务订单类 必须集成 BusyPHP\trade\interfaces\PayOrder,
         //     'exclude' => [], // 排除的支付类型
@@ -78,7 +84,7 @@ return [
     ],
     
     // 支付接口绑定
-    'apis'            => [
+    'apis'              => [
         // 支付类型(int) => [
         //      'name'   => '支付类型名称',
         //      'alias'  => '支付厂商',
@@ -87,6 +93,7 @@ return [
         //      'notify' => 支付异步通知接口类 必须集成 BusyPHP\trade\interfaces\PayNotify,
         //      'refund' => 支付退款接口类 必须集成 BusyPHP\trade\interfaces\PayRefund,
         //      'refund_notify' => 支付退款异步通知接口类 必须集成 BusyPHP\trade\interfaces\PayRefundNotify,
+        //      'refund_notify_url' => 退款异步通知地址,
         // ]
     ]
 ];

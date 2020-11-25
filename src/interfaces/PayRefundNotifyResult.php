@@ -12,45 +12,39 @@ use BusyPHP\helper\util\Transform;
  */
 class PayRefundNotifyResult
 {
-    private $refundTradeNo    = '';
+    private $refundNo = '';
     
-    private $apiRefundTradeNo = '';
+    private $apiRefundNo   = '';
     
-    private $apiPayTradeNo    = '';
+    private $payApiTradeNo = '';
     
-    private $refundPrice      = 0;
+    private $payTradeNo    = '';
     
-    private $payTradeNo       = '';
+    private $status        = false;
     
-    private $price            = 0;
+    private $errMsg        = '';
     
-    private $status           = false;
-    
-    private $errMsg           = '';
-    
-    private $successTime      = 0;
-    
-    private $refundAccount    = '';
+    private $refundAccount = '';
     
     
     /**
      * 获取平台退款单号
      * @return string
      */
-    public function getRefundTradeNo()
+    public function getRefundNo()
     {
-        return $this->refundTradeNo;
+        return $this->refundNo;
     }
     
     
     /**
      * 设置平台退款单号
-     * @param string $refundTradeNo
+     * @param string $refundNo
      * @return $this
      */
-    public function setRefundTradeNo($refundTradeNo) : self
+    public function setRefundNo($refundNo) : self
     {
-        $this->refundTradeNo = trim($refundTradeNo);
+        $this->refundNo = trim($refundNo);
         
         return $this;
     }
@@ -60,20 +54,20 @@ class PayRefundNotifyResult
      * 获取三方退款单号
      * @return string
      */
-    public function getApiRefundTradeNo()
+    public function getApiRefundNo()
     {
-        return $this->apiRefundTradeNo;
+        return $this->apiRefundNo;
     }
     
     
     /**
      * 设置三方退款单号
-     * @param string $apiRefundTradeNo
+     * @param string $apiRefundNo
      * @return $this
      */
-    public function setApiRefundTradeNo($apiRefundTradeNo) : self
+    public function setApiRefundNo($apiRefundNo) : self
     {
-        $this->apiRefundTradeNo = trim($apiRefundTradeNo);
+        $this->apiRefundNo = trim($apiRefundNo);
         
         return $this;
     }
@@ -83,43 +77,20 @@ class PayRefundNotifyResult
      * 获取三方支付单号
      * @return string
      */
-    public function getApiPayTradeNo()
+    public function getPayApiTradeNo()
     {
-        return $this->apiPayTradeNo;
+        return $this->payApiTradeNo;
     }
     
     
     /**
      * 设置三方支付单号
-     * @param string $apiPayTradeNo
+     * @param string $payApiTradeNo
      * @return $this
      */
-    public function setApiPayTradeNo($apiPayTradeNo) : self
+    public function setPayApiTradeNo($payApiTradeNo) : self
     {
-        $this->apiPayTradeNo = trim($apiPayTradeNo);
-        
-        return $this;
-    }
-    
-    
-    /**
-     * 获取退款金额
-     * @return float
-     */
-    public function getRefundPrice()
-    {
-        return $this->refundPrice;
-    }
-    
-    
-    /**
-     * 设置退款金额，单位元，精确到2位小数
-     * @param float $refundPrice
-     * @return $this
-     */
-    public function setRefundPrice($refundPrice) : self
-    {
-        $this->refundPrice = floatval($refundPrice);
+        $this->payApiTradeNo = trim($payApiTradeNo);
         
         return $this;
     }
@@ -143,29 +114,6 @@ class PayRefundNotifyResult
     public function setPayTradeNo(string $payTradeNo) : self
     {
         $this->payTradeNo = trim($payTradeNo);
-        
-        return $this;
-    }
-    
-    
-    /**
-     * 获取支付总金额
-     * @return float
-     */
-    public function getPrice()
-    {
-        return $this->price;
-    }
-    
-    
-    /**
-     * 设置支付总金额
-     * @param float $price
-     * @return $this
-     */
-    public function setPrice($price) : self
-    {
-        $this->price = floatval($price);
         
         return $this;
     }
@@ -218,29 +166,6 @@ class PayRefundNotifyResult
     
     
     /**
-     * 获取退款成功时间戳
-     * @return int
-     */
-    public function getSuccessTime()
-    {
-        return $this->successTime;
-    }
-    
-    
-    /**
-     * 设置退款成功时间戳
-     * @param int $successTime
-     * @return $this
-     */
-    public function setSuccessTime($successTime) : self
-    {
-        $this->successTime = intval($successTime);
-        
-        return $this;
-    }
-    
-    
-    /**
      * 获取退款的账户信息
      * @return string
      */
@@ -260,11 +185,5 @@ class PayRefundNotifyResult
         $this->refundAccount = trim($refundAccount);
         
         return $this;
-    }
-    
-    
-    public function toArray()
-    {
-        return get_object_vars($this);
     }
 }

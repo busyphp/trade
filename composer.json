@@ -11,7 +11,7 @@
 	"license"     : "Apache-2.0",
 	"require"     : {
 		"php"             : ">=7.1.0",
-		"busyphp/busyphp" : "^3.0",
+		"busyphp/busyphp" : "^3.0.5",
 		"ext-json"        : "*"
 	},
 	"require-dev" : {
@@ -19,7 +19,9 @@
 	},
 	"autoload"    : {
 		"psr-4" : {
-			"BusyPHP\\trade\\" : "src"
+			"BusyPHP\\trade\\" : "src",
+			"app\\"            : "app",
+			"core\\"           : "core"
 		}
 	},
 	"extra"       : {

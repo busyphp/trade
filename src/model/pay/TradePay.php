@@ -207,7 +207,7 @@ class TradePay extends Model
      * @param $orderTradeNo
      * @return PayOrderPayData
      * @throws VerifyException
-     * @throws AppException
+     * @throws Exception
      */
     public function getPayData($orderTradeNo)
     {
@@ -531,8 +531,8 @@ class TradePay extends Model
                 
                 // 支付类型
                 $types              = $payTypes[$r['pay_type']] ?? [];
-                $r['pay_type_name'] = $types['name'] ?? '未知';
-                $r['pay_name']      = $types['alias'] ?? '未知';
+                $r['pay_type_name'] = $types['name'] ?? '';
+                $r['pay_name']      = $types['alias'] ?? '';
                 
                 
                 // 开票类型
@@ -655,6 +655,50 @@ class TradePay extends Model
         $save->ticketStatus = $status;
         if (false === $this->whereof($where)->saveData($save)) {
             throw new SQLException('设为开票中失败', $this);
+        }
+    }
+    
+    
+    /**
+     * 更新可退金额
+     * @param string   $orderTradeNo 业务订单号或订单ID
+     * @param callable $callback
+     * @throws Exception
+     */
+    public function updateRefundAmountByCallback($orderTradeNo, callable $callback)
+    {
+        $this->startTrans();
+        try {
+            $info   = $this->lock(true)->where('pay_time', '>', 0)->getInfoByOrderTradeNo($orderTradeNo);
+            $amount = call_user_func_array($callback, [$info]);
+            $this->updateRefundAmount($info['id'], $amount);
+            
+            $this->commit();
+        } catch (Exception $e) {
+            $this->rollback();
+            
+            throw $e;
+        }
+    }
+    
+    
+    /**
+     * 更新剩余可退金额
+     * @param $id
+     * @param $amount
+     * @throws SQLException
+     */
+    public function updateRefundAmount($id, $amount)
+    {
+        $amount = floatval($amount);
+        if ($amount < 0) {
+            if (false === $this->where('id', '=', $id)->setDec('refund_amount', abs($amount))) {
+                throw new SQLException('减少剩余退款金额失败', $this);
+            }
+        } elseif ($amount > 0) {
+            if (false === $this->where('id', '=', $id)->setInc('refund_amount', $amount)) {
+                throw new SQLException('退还剩余退款金额失败', $this);
+            }
         }
     }
 }

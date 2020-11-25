@@ -24,7 +24,7 @@ interface PayRefundNotify
     
     
     /**
-     * 失败通知
+     * 失败通知，不要抛出异常
      * @param Throwable $e
      * @return Response
      */
@@ -32,18 +32,10 @@ interface PayRefundNotify
     
     
     /**
-     * 成功通知
-     * @param string $message
+     * 成功通知，不要抛出异常
      * @return Response
      */
-    public function onSuccess($message = '') : Response;
-    
-    
-    /**
-     * 获取请求参数
-     * @return array
-     */
-    public function getRequestParams();
+    public function onSuccess() : Response;
     
     
     /**
@@ -51,11 +43,4 @@ interface PayRefundNotify
      * @return string
      */
     public function getRequestString();
-    
-    
-    /**
-     * 获取退款单号
-     * @return string
-     */
-    public function getRefundTradeNo();
 }

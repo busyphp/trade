@@ -3,7 +3,7 @@
 namespace BusyPHP\trade\interfaces;
 
 use BusyPHP\exception\AppException;
-use BusyPHP\trade\model\pay\TradePayField;
+use BusyPHP\trade\model\refund\TradeRefundField;
 
 /**
  * 支付退款接口类，所有支付退款都应该集成该接口
@@ -14,31 +14,10 @@ use BusyPHP\trade\model\pay\TradePayField;
 interface PayRefund
 {
     /**
-     * 设置平台交易订单数据对象
-     * @param TradePayField $info
+     * 设置平台退款订单数据对象
+     * @param TradeRefundField $info
      */
-    public function setTradeInfo(TradePayField $info);
-    
-    
-    /**
-     * 设置平台退款单号
-     * @param string $refundNo
-     */
-    public function setRefundTradeNo($refundNo);
-    
-    
-    /**
-     * 设置要申请退款的金额
-     * @param float $refundPrice 精确到小数点2位
-     */
-    public function setRefundPrice($refundPrice);
-    
-    
-    /**
-     * 设置退款原因
-     * @param string $reason
-     */
-    public function setRefundReason($reason);
+    public function setTradeRefundInfo(TradeRefundField $info);
     
     
     /**
