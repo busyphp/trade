@@ -111,6 +111,39 @@ CREATE TABLE `busy_trade_no` (
 SQL;
             $db->execute($insertSQL);
             
+            // 创建退款表 busy_trade_refund
+            $refundSQL = <<<SQL
+CREATE TABLE `busy_trade_refund` (
+  `id` INT(11) NOT NULL,
+  `user_id` INT(11) NOT NULL DEFAULT '0' COMMENT '会员ID',
+  `refund_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '平台退款单号',
+  `refund_price` DECIMAL(10,2) NOT NULL DEFAULT '0.00' COMMENT '退款金额',
+  `api_refund_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '三方退款单号',
+  `status` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '退款状态 0 未处理，1:退款中 8退款成功，9退款失败',
+  `status_remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '状态备注',
+  `start_time` INT(11) NOT NULL DEFAULT '0' COMMENT '开始执行退款时间',
+  `complete_time` INT(11) NOT NULL DEFAULT '0' COMMENT '退款完成时间',
+  `order_trade_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '业务订单号',
+  `pay_id` INT(11) NOT NULL DEFAULT '0' COMMENT '交易订单ID',
+  `pay_type` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '交易订单支付类型',
+  `pay_trade_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '交易订单号',
+  `pay_api_trade_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '交易订单三方支付订单号',
+  `pay_price` DECIMAL(10,2) NOT NULL DEFAULT '0.00' COMMENT '交易订单实际支付金额',
+  `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因备注',
+  `create_time` INT(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `update_time` INT(11) NOT NULL DEFAULT '0' COMMENT '修改时间',
+   PRIMARY KEY (`id`),
+   UNIQUE KEY `refund_no` (`refund_no`) USING BTREE,
+   KEY `pay_id` (`pay_id`),
+   KEY `pay_trade_no` (`pay_trade_no`),
+   KEY `pay_pay_trade_no` (`pay_api_trade_no`),
+   KEY `user_id` (`user_id`),
+   KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易退款表';
+SQL;
+            $db->execute($refundSQL);
+            
+            
             // 插入菜单数据
             $dataSQL = <<<SQL
 INSERT INTO `busy_system_menu` (`name`, `action`, `control`, `module`, `pattern`, `params`, `higher`, `icon`, `link`, `target`, `is_default`, `is_show`, `is_disabled`, `is_has_action`, `is_system`, `sort`) VALUES
