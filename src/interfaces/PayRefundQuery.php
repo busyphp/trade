@@ -2,8 +2,8 @@
 
 namespace BusyPHP\trade\interfaces;
 
-use BusyPHP\exception\AppException;
 use BusyPHP\trade\model\refund\TradeRefundField;
+use Exception;
 
 /**
  * 支付退款结果查询接口类
@@ -21,9 +21,9 @@ interface PayRefundQuery
     
     
     /**
-     * 执行退款
+     * 执行查询
      * @return PayRefundNotifyResult
-     * @throws AppException
+     * @throws Exception
      */
     public function query() : PayRefundNotifyResult;
 }
