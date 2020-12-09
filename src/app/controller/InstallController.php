@@ -21,11 +21,13 @@ class InstallController extends Controller
     
     public function index()
     {
-        $groupName   = Str::snake($this->getTradeConfigAdminPayMenuModule());
-        $controlName = Str::snake($this->getTradeConfigAdminPayMenuControl());
-        $actionName  = $this->getTradeConfigAdminPayMenuAction();
-        
+        $groupName   = Str::snake($this->getTradeConfigAdminMenuModule());
+        $controlName = Str::snake($this->getTradeConfigAdminMenuControl());
         try {
+            if (!$groupName || !$controlName) {
+                throw new AppException("请先配置 config/extend/trade.php 中的 admin.menu 项");
+            }
+            
             $db = SystemMenu::init();
             
             // 是否有该分组
@@ -37,7 +39,6 @@ class InstallController extends Controller
                 throw new AppException("没有找到菜单: [{$groupName}]分组");
             }
             
-            
             // 是否有该控制器
             $where          = SystemMenuField::init();
             $where->action  = '';
@@ -47,10 +48,9 @@ class InstallController extends Controller
                 throw new AppException("没有找到菜单: [{$groupName}.{$controlName}]控制器");
             }
             
-            
             // 是否安装过该菜单
             $where          = SystemMenuField::init();
-            $where->action  = $actionName;
+            $where->action  = ['in', ['pay_list', 'refund_list']];
             $where->control = $controlName;
             $where->module  = $groupName;
             if ($db->whereof($where)->findData()) {
@@ -58,7 +58,7 @@ class InstallController extends Controller
             }
             
             // 查询是否创建了表
-            if ($db->query("SELECT table_name FROM information_schema.TABLES where table_name IN ('busy_trade_pay', 'busy_trade_no') AND table_schema='{$db->getConfig('database')}'")) {
+            if ($db->query("SELECT table_name FROM information_schema.TABLES where table_name IN ('busy_trade_pay', 'busy_trade_no', 'busy_trade_refund') AND table_schema='{$db->getConfig('database')}'")) {
                 throw new AppException('您已安装过该插件，请勿重复安装');
             }
             
@@ -114,31 +114,37 @@ SQL;
             // 创建退款表 busy_trade_refund
             $refundSQL = <<<SQL
 CREATE TABLE `busy_trade_refund` (
-  `id` INT(11) NOT NULL,
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
   `user_id` INT(11) NOT NULL DEFAULT '0' COMMENT '会员ID',
   `refund_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '平台退款单号',
   `refund_price` DECIMAL(10,2) NOT NULL DEFAULT '0.00' COMMENT '退款金额',
   `api_refund_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '三方退款单号',
   `status` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '退款状态 0 未处理，1:退款中 8退款成功，9退款失败',
-  `status_remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '状态备注',
+  `fail_remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '失败备注',
+  `refund_account` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退入账户说明',
+  `create_time` INT(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `queue_time` INT(11) NOT NULL DEFAULT '0' COMMENT '加入列队的时间',
   `start_time` INT(11) NOT NULL DEFAULT '0' COMMENT '开始执行退款时间',
   `complete_time` INT(11) NOT NULL DEFAULT '0' COMMENT '退款完成时间',
   `order_trade_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '业务订单号',
+  `order_type` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '业务类型',
+  `order_value` VARCHAR(32) NOT NULL DEFAULT '' COMMENT '业务参数',
   `pay_id` INT(11) NOT NULL DEFAULT '0' COMMENT '交易订单ID',
   `pay_type` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '交易订单支付类型',
   `pay_trade_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '交易订单号',
   `pay_api_trade_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '交易订单三方支付订单号',
   `pay_price` DECIMAL(10,2) NOT NULL DEFAULT '0.00' COMMENT '交易订单实际支付金额',
   `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退款原因备注',
-  `create_time` INT(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
-  `update_time` INT(11) NOT NULL DEFAULT '0' COMMENT '修改时间',
    PRIMARY KEY (`id`),
    UNIQUE KEY `refund_no` (`refund_no`) USING BTREE,
    KEY `pay_id` (`pay_id`),
    KEY `pay_trade_no` (`pay_trade_no`),
    KEY `pay_pay_trade_no` (`pay_api_trade_no`),
    KEY `user_id` (`user_id`),
-   KEY `status` (`status`)
+   KEY `status` (`status`),
+   KEY `queue_time` (`queue_time`),
+   KEY `status_2` (`status`,`queue_time`),
+   KEY `order_type` (`order_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易退款表';
 SQL;
             $db->execute($refundSQL);
@@ -147,7 +153,8 @@ SQL;
             // 插入菜单数据
             $dataSQL = <<<SQL
 INSERT INTO `busy_system_menu` (`name`, `action`, `control`, `module`, `pattern`, `params`, `higher`, `icon`, `link`, `target`, `is_default`, `is_show`, `is_disabled`, `is_has_action`, `is_system`, `sort`) VALUES
-    ('支付订单', '{$actionName}', '{$controlName}', '{$groupName}', '', '', '', 'list-ul', '', '', 0, 1, 0, 1, 0, 50)
+    ('支付记录', 'pay_list', '{$controlName}', '{$groupName}', '', '', '', 'list-ul', '', '', 0, 1, 0, 1, 0, 50),
+    ('退款记录', 'refund_list', '{$controlName}', '{$groupName}', '', '', '', 'list-ul', '', '', 0, 1, 0, 1, 0, 50)
 SQL;
             $db->execute($dataSQL);
             

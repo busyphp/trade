@@ -19,16 +19,17 @@ class Service extends \think\Service
             
             // 后台路由
             if ($this->app->http->getName() === 'admin') {
-                $group   = ucfirst(Str::camel($this->getTradeConfigAdminPayMenuModule()));
-                $control = ucfirst(Str::camel($this->getTradeConfigAdminPayMenuControl()));
-                $action  = $this->getTradeConfigAdminPayMenuAction();
-                
-                $route->rule("{$group}.{$control}/{$action}", TradeController::class . '@index')->append([
-                    'group'   => $group,
-                    'control' => $control,
-                    'action'  => $action,
-                    'type'    => 'plugin'
-                ]);
+                $group   = ucfirst(Str::camel($this->getTradeConfigAdminMenuModule()));
+                $control = ucfirst(Str::camel($this->getTradeConfigAdminMenuControl()));
+                if ($group && $control) {
+                    $route->rule("{$group}.{$control}/<action>", TradeController::class . '@<action>')->append([
+                        'group'   => $group,
+                        'control' => $control,
+                        'type'    => 'plugin'
+                    ])->pattern([
+                        'action' => '[pay_list|refund_list]+'
+                    ]);
+                }
             }
         });
     }

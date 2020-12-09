@@ -15,17 +15,21 @@ use BusyPHP\model\Field;
  * @method static mixed refundPrice($op = null, $value = null) 退款金额
  * @method static mixed apiRefundNo($op = null, $value = null) 三方退款单号
  * @method static mixed status($op = null, $value = null) 退款状态 0 未处理，1:退款中 8退款成功，9退款失败
- * @method static mixed statusRemark($op = null, $value = null) 状态备注
+ * @method static mixed failRemark($op = null, $value = null) 状态备注
+ * @method static mixed refundAccount($op = null, $value = null) 退款退入账户说明
+ * @method static mixed createTime($op = null, $value = null) 创建时间
+ * @method static mixed queueTime($op = null, $value = null) 加入列队的时间
+ * @method static mixed startTime($op = null, $value = null) 开始执行退款时间
  * @method static mixed completeTime($op = null, $value = null) 退款完成时间
  * @method static mixed orderTradeNo($op = null, $value = null) 业务订单号
+ * @method static mixed orderType($op = null, $value = null) 业务类型
+ * @method static mixed orderValue($op = null, $value = null) 业务参数
  * @method static mixed payId($op = null, $value = null) 交易订单ID
  * @method static mixed payType($op = null, $value = null) 交易订单支付类型
  * @method static mixed payTradeNo($op = null, $value = null) 交易订单号
  * @method static mixed payApiTradeNo($op = null, $value = null) 交易订单三方支付订单号
  * @method static mixed payPrice($op = null, $value = null) 交易订单实际支付金额
  * @method static mixed remark($op = null, $value = null) 退款原因备注
- * @method static mixed createTime($op = null, $value = null) 创建时间
- * @method static mixed updateTime($op = null, $value = null) 修改时间
  */
 class TradeRefundField extends Field
 {
@@ -68,7 +72,25 @@ class TradeRefundField extends Field
      * 状态备注
      * @var string
      */
-    public $statusRemark;
+    public $failRemark;
+    
+    /**
+     * 退款退入账户说明
+     * @var string
+     */
+    public $refundAccount;
+    
+    /**
+     * 创建时间
+     * @var int
+     */
+    public $createTime;
+    
+    /**
+     * 加入列队的时间
+     * @var int
+     */
+    public $queueTime;
     
     /**
      * 开始执行退款时间
@@ -87,6 +109,18 @@ class TradeRefundField extends Field
      * @var string
      */
     public $orderTradeNo;
+    
+    /**
+     * 业务类型
+     * @var string
+     */
+    public $orderType;
+    
+    /**
+     * 业务参数
+     * @var string
+     */
+    public $orderValue;
     
     /**
      * 交易订单ID
@@ -123,16 +157,4 @@ class TradeRefundField extends Field
      * @var string
      */
     public $remark;
-    
-    /**
-     * 创建时间
-     * @var int
-     */
-    public $createTime;
-    
-    /**
-     * 修改时间
-     * @var int
-     */
-    public $updateTime;
 }

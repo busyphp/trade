@@ -34,20 +34,14 @@ trait TradeConfig
     }
     
     
-    public function getTradeConfigAdminPayMenuModule()
+    public function getTradeConfigAdminMenuModule()
     {
-        return $this->getTradeConfig('admin.pay.menu.module', 'system');
+        return $this->getTradeConfig('admin.menu.module', '');
     }
     
     
-    public function getTradeConfigAdminPayMenuControl()
+    public function getTradeConfigAdminMenuControl()
     {
-        return $this->getTradeConfig('admin.pay.menu.control', 'trade');
-    }
-    
-    
-    public function getTradeConfigAdminPayMenuAction()
-    {
-        return $this->getTradeConfig('admin.pay.menu.action', 'index');
+        return $this->getTradeConfig('admin.menu.control', '');
     }
 }

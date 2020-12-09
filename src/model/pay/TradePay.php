@@ -364,7 +364,7 @@ class TradePay extends Model
      * @param string $payType 支付类型
      * @return Response
      */
-    public function notify($payType) : Response
+    public function notify($payType = '') : Response
     {
         // 获取支付类型
         $payType = trim($payType);
@@ -515,41 +515,44 @@ class TradePay extends Model
      */
     public static function parseList($list)
     {
-        return parent::parseList($list, function($list) {
-            $ticketStatusList = self::getTicketStatus();
-            $payTypes         = self::init()->getPayTypes();
-            foreach ($list as $i => $r) {
-                $r['format_create_time'] = Transform::date($r['create_time']);
-                $r['format_pay_time']    = Transform::date($r['pay_time']);
-                $r['pay_type']           = intval($r['pay_type']);
-                $r['is_pay']             = $r['pay_time'] > 0;
+        return parent::parseList(
+            $list,
+            function($list) {
+                $ticketStatusList = self::getTicketStatus();
+                $payTypes         = self::init()->getPayTypes();
+                foreach ($list as $i => $r) {
+                    $r['format_create_time'] = Transform::date($r['create_time']);
+                    $r['format_pay_time']    = Transform::date($r['pay_time']);
+                    $r['pay_type']           = intval($r['pay_type']);
+                    $r['is_pay']             = $r['pay_time'] > 0;
+                    
+                    // 状态
+                    $r['order_status']  = intval($r['order_status']);
+                    $r['order_success'] = $r['order_status'] == self::ORDER_STATUS_SUCCESS;
+                    $r['order_fail']    = $r['order_status'] == self::ORDER_STATUS_FAIL;
+                    
+                    // 支付类型
+                    $types              = $payTypes[$r['pay_type']] ?? [];
+                    $r['pay_type_name'] = $types['name'] ?? '';
+                    $r['pay_name']      = $types['alias'] ?? '';
+                    
+                    
+                    // 开票类型
+                    $r['ticket_status_name'] = $ticketStatusList[$r['ticket_status']];
+                    $r['ticket_is_none']     = $r['ticket_status'] == self::TICKET_STATUS_NONE;
+                    $r['ticket_is_pending']  = $r['ticket_status'] == self::TICKET_STATUS_PENDING;
+                    $r['ticket_is_success']  = $r['ticket_status'] == self::TICKET_STATUS_SUCCESS;
+                    $r['ticket_is_fail']     = $r['ticket_status'] == self::TICKET_STATUS_FAIL;
+                    
+                    // 是否可以申请开票
+                    $r['can_apply_ticket'] = ($r['is_pay'] && $r['ticket_is_none']) || $r['ticket_is_fail'];
+                    
+                    $list[$i] = $r;
+                }
                 
-                // 状态
-                $r['order_status']  = intval($r['order_status']);
-                $r['order_success'] = $r['order_status'] == self::ORDER_STATUS_SUCCESS;
-                $r['order_fail']    = $r['order_status'] == self::ORDER_STATUS_FAIL;
-                
-                // 支付类型
-                $types              = $payTypes[$r['pay_type']] ?? [];
-                $r['pay_type_name'] = $types['name'] ?? '';
-                $r['pay_name']      = $types['alias'] ?? '';
-                
-                
-                // 开票类型
-                $r['ticket_status_name'] = $ticketStatusList[$r['ticket_status']];
-                $r['ticket_is_none']     = $r['ticket_status'] == self::TICKET_STATUS_NONE;
-                $r['ticket_is_pending']  = $r['ticket_status'] == self::TICKET_STATUS_PENDING;
-                $r['ticket_is_success']  = $r['ticket_status'] == self::TICKET_STATUS_SUCCESS;
-                $r['ticket_is_fail']     = $r['ticket_status'] == self::TICKET_STATUS_FAIL;
-                
-                // 是否可以申请开票
-                $r['can_apply_ticket'] = ($r['is_pay'] && $r['ticket_is_none']) || $r['ticket_is_fail'];
-                
-                $list[$i] = $r;
+                return $list;
             }
-            
-            return $list;
-        });
+        );
     }
     
     
@@ -561,20 +564,24 @@ class TradePay extends Model
      */
     public static function parseExtendList($list, $isOnly = false)
     {
-        return parent::parseExtendList($list, $isOnly, function($list) {
-            $userIds = [];
-            foreach ($list as $i => $r) {
-                $userIds[] = $r['user_id'];
+        return parent::parseExtendList(
+            $list,
+            $isOnly,
+            function($list) {
+                $userIds = [];
+                foreach ($list as $i => $r) {
+                    $userIds[] = $r['user_id'];
+                }
+                
+                $userList = self::init()->getMemberModel()->buildListWithField($userIds);
+                foreach ($list as $i => $r) {
+                    $r['user'] = $userList[$r['user_id']] ?? [];
+                    $list[$i]  = $r;
+                }
+                
+                return $list;
             }
-            
-            $userList = self::init()->getMemberModel()->buildListWithField($userIds);
-            foreach ($list as $i => $r) {
-                $r['user'] = $userList[$r['user_id']] ?? [];
-                $list[$i]  = $r;
-            }
-            
-            return $list;
-        });
+        );
     }
     
     
@@ -632,12 +639,15 @@ class TradePay extends Model
      */
     public static function getTicketStatus($val = null)
     {
-        return self::parseVars([
-            self::TICKET_STATUS_NONE    => '未开票',
-            self::TICKET_STATUS_PENDING => '开票中',
-            self::TICKET_STATUS_SUCCESS => '已开票',
-            self::TICKET_STATUS_FAIL    => '开票失败'
-        ], $val);
+        return self::parseVars(
+            [
+                self::TICKET_STATUS_NONE    => '未开票',
+                self::TICKET_STATUS_PENDING => '开票中',
+                self::TICKET_STATUS_SUCCESS => '已开票',
+                self::TICKET_STATUS_FAIL    => '开票失败'
+            ],
+            $val
+        );
     }
     
     
@@ -662,23 +672,18 @@ class TradePay extends Model
     /**
      * 更新可退金额
      * @param string   $orderTradeNo 业务订单号或订单ID
-     * @param callable $callback
+     * @param callable $callback 返回false不更新，正数加上，负数减去
      * @throws Exception
      */
     public function updateRefundAmountByCallback($orderTradeNo, callable $callback)
     {
-        $this->startTrans();
-        try {
-            $info   = $this->lock(true)->where('pay_time', '>', 0)->getInfoByOrderTradeNo($orderTradeNo);
-            $amount = call_user_func_array($callback, [$info]);
-            $this->updateRefundAmount($info['id'], $amount);
-            
-            $this->commit();
-        } catch (Exception $e) {
-            $this->rollback();
-            
-            throw $e;
+        $info   = $this->lock(true)->where('pay_time', '>', 0)->getInfoByOrderTradeNo($orderTradeNo);
+        $amount = call_user_func_array($callback, [$info]);
+        if (false === $amount) {
+            return;
         }
+        
+        $this->updateRefundAmount($info['id'], $amount);
     }
     
     
@@ -688,7 +693,7 @@ class TradePay extends Model
      * @param $amount
      * @throws SQLException
      */
-    public function updateRefundAmount($id, $amount)
+    protected function updateRefundAmount($id, $amount)
     {
         $amount = floatval($amount);
         if ($amount < 0) {

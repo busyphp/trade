@@ -12,7 +12,7 @@ use BusyPHP\helper\util\Transform;
  */
 class PayRefundNotifyResult
 {
-    private $refundNo = '';
+    private $refundNo      = '';
     
     private $apiRefundNo   = '';
     
@@ -25,6 +25,8 @@ class PayRefundNotifyResult
     private $errMsg        = '';
     
     private $refundAccount = '';
+    
+    private $needRehandle  = false;
     
     
     /**
@@ -185,5 +187,25 @@ class PayRefundNotifyResult
         $this->refundAccount = trim($refundAccount);
         
         return $this;
+    }
+    
+    
+    /**
+     * 设置是否重新处理
+     * @param bool $needRehandle
+     */
+    public function setNeedRehandle(bool $needRehandle) : void
+    {
+        $this->needRehandle = $needRehandle;
+    }
+    
+    
+    /**
+     * 是否不处理
+     * @return bool
+     */
+    public function isNeedRehandle() : bool
+    {
+        return $this->needRehandle;
     }
 }

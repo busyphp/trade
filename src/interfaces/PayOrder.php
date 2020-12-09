@@ -37,9 +37,10 @@ interface PayOrder
     /**
      * 设置订单退款状态，内部不要启用事物
      * @param string $orderTradeNo 业务订单号
+     * @param int    $orderType 业务类型
+     * @param string $orderValue 业务参数
      * @param bool   $status 退款状态，成功还是失败
      * @param string $statusRemark 退款状态原因，成功为退款退入的账户信息，失败为失败原因
-     * @throws Exception
      */
-    public function setRefundStatus($orderTradeNo, bool $status, $statusRemark = '');
+    public function setRefundStatus($orderTradeNo, $orderType, $orderValue, bool $status, $statusRemark = '');
 }

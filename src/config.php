@@ -9,15 +9,14 @@
 return [
     // 后台配置
     'admin'             => [
+        // 菜单配置
+        'menu'   => [
+            'module'  => '',
+            'control' => '',
+        ],
+        
         // 支付订单页面配置
-        'pay' => [
-            // 菜单配置
-            'menu'          => [
-                'module'  => 'system',
-                'control' => 'trade',
-                'action'  => 'index',
-            ],
-            
+        'pay'    => [
             // 默认Where条件
             'where'         => [],
             
@@ -58,6 +57,50 @@ return [
                 }
             ]
         ],
+        
+        
+        // 退款订单页面配置
+        'refund' => [
+            // 默认Where条件
+            'where'         => [],
+            
+            // 搜索字段可选项配置
+            'select_fields' => [
+                'phone' => '手机号',
+            ],
+            
+            // 搜索字段Where解析
+            'select_where'  => function(array $where) {
+                return $where;
+            },
+            
+            // 时间范围
+            'time_range'    => [
+                // 是否启用
+                'status'     => true,
+                
+                // 时间格式
+                'format'     => 'yyyy-MM-dd',
+                
+                // 默认开始时间
+                'start_time' => function() {
+                    return date('Y-m-d');
+                },
+                
+                // 默认结束时间
+                'end_time'   => function() {
+                    return date('Y-m-d');
+                }
+            ],
+            
+            // 列表展示配置
+            'list'          => [
+                // 所属会员展示字段
+                'user' => function(array $user) {
+                    return $user['username'] ?? '';
+                }
+            ]
+        ]
     ],
     
     // 指定支付订单需要的的会员模型
@@ -93,7 +136,7 @@ return [
         //      'notify' => 支付异步通知接口类 必须集成 BusyPHP\trade\interfaces\PayNotify,
         //      'refund' => 支付退款接口类 必须集成 BusyPHP\trade\interfaces\PayRefund,
         //      'refund_notify' => 支付退款异步通知接口类 必须集成 BusyPHP\trade\interfaces\PayRefundNotify,
-        //      'refund_notify_url' => 退款异步通知地址,
+        //      'refund_query' => 退款查询接口类，必须集成 BusyPHP\trade\interfaces\PayRefundQuery,
         // ]
     ]
 ];
