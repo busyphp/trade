@@ -148,9 +148,10 @@ class TradeRefund extends Model
                 $insert->createTime    = time();
                 $insert->status        = self::REFUND_STATUS_WAIT;
                 $insert->remark        = $refundRemark;
-                if (!$this->addData($insert)) {
+                if (!$id = $this->addData($insert)) {
                     throw new SQLException('创建退款订单失败', $this);
                 }
+                $insert->id = $id;
                 
                 return -$price;
             });
