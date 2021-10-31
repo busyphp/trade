@@ -1,14 +1,17 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
+use BusyPHP\model\ObjectOption;
+
 /**
- * 支付退款结果结构
+ * 支付退款下单结果结构
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/10/10 下午12:27 下午 PayRefundResult.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午1:21 PayRefundResult.php $
  */
-class PayRefundResult
+class PayRefundResult extends ObjectOption
 {
     /**
      * 三方退款单号
@@ -33,7 +36,7 @@ class PayRefundResult
      * 获取三方退款单号
      * @return string
      */
-    public function getApiRefundNo()
+    public function getApiRefundNo() : string
     {
         return $this->apiRefundNo;
     }
@@ -44,9 +47,9 @@ class PayRefundResult
      * @param string $apiRefundNo
      * @return $this
      */
-    public function setApiRefundNo($apiRefundNo) : self
+    public function setApiRefundNo(string $apiRefundNo) : self
     {
-        $this->apiRefundNo = $apiRefundNo;
+        $this->apiRefundNo = trim($apiRefundNo);
         
         return $this;
     }
@@ -55,10 +58,13 @@ class PayRefundResult
     /**
      * 设置是否需要重新处理
      * @param bool $needRehandle
+     * @return $this
      */
-    public function setNeedRehandle(bool $needRehandle) : void
+    public function setNeedRehandle(bool $needRehandle) : self
     {
         $this->needRehandle = $needRehandle;
+        
+        return $this;
     }
     
     
@@ -75,10 +81,13 @@ class PayRefundResult
     /**
      * 设置退款退入账户
      * @param string $refundAccount
+     * @return $this
      */
-    public function setRefundAccount($refundAccount) : void
+    public function setRefundAccount(string $refundAccount) : self
     {
         $this->refundAccount = trim($refundAccount);
+        
+        return $this;
     }
     
     
@@ -86,7 +95,7 @@ class PayRefundResult
      * 获取退款退入账户
      * @return string
      */
-    public function getRefundAccount()
+    public function getRefundAccount() : string
     {
         return $this->refundAccount;
     }
