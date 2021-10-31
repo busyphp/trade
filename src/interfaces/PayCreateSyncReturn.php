@@ -1,33 +1,54 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
-use BusyPHP\helper\util\Transform;
+use BusyPHP\model\ObjectOption;
 
 /**
  * 支付同步返回数据结构
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/10/10 下午12:23 下午 PayCreateSyncReturn.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午11:08 PayCreateSyncReturn.php $
  */
-class PayCreateSyncReturn
+class PayCreateSyncReturn extends ObjectOption
 {
+    /**
+     * 三方交易单号
+     * @var string
+     */
     private $apiTradeNo = '';
     
-    private $apiPrice   = '0.00';
+    /**
+     * 实际支付金额
+     * @var float
+     */
+    private $apiPrice = 0;
     
+    /**
+     * 平台交易单号
+     * @var string
+     */
     private $payTradeNo = '';
     
-    private $status     = false;
+    /**
+     * 是否支付成功
+     * @var bool
+     */
+    private $status = false;
     
-    private $message    = '';
+    /**
+     * 支付失败描述
+     * @var string
+     */
+    private $errorMessage = '';
     
     
     /**
      * 获取三方支付单号
      * @return string
      */
-    public function getApiTradeNo()
+    public function getApiTradeNo() : string
     {
         return $this->apiTradeNo;
     }
@@ -38,7 +59,7 @@ class PayCreateSyncReturn
      * @param string $apiTradeNo
      * @return $this
      */
-    public function setApiTradeNo($apiTradeNo)
+    public function setApiTradeNo(string $apiTradeNo) : self
     {
         $this->apiTradeNo = trim($apiTradeNo);
         
@@ -47,21 +68,21 @@ class PayCreateSyncReturn
     
     
     /**
-     * 获取平台订单号
+     * 获取平台交易单号
      * @return string
      */
-    public function getPayTradeNo()
+    public function getPayTradeNo() : string
     {
         return $this->payTradeNo;
     }
     
     
     /**
-     * 设置平台订单号
+     * 设置平台交易单号
      * @param string $payTradeNo
      * @return $this
      */
-    public function setPayTradeNo($payTradeNo)
+    public function setPayTradeNo(string $payTradeNo) : self
     {
         $this->payTradeNo = trim($payTradeNo);
         
@@ -71,9 +92,9 @@ class PayCreateSyncReturn
     
     /**
      * 获取支付金额
-     * @return string
+     * @return float
      */
-    public function getApiPrice()
+    public function getApiPrice() : float
     {
         return $this->apiPrice;
     }
@@ -81,35 +102,35 @@ class PayCreateSyncReturn
     
     /**
      * 设置金额，小数保留2位，单位元
-     * @param string $apiPrice
+     * @param float $apiPrice
      * @return $this
      */
-    public function setApiPrice($apiPrice)
+    public function setApiPrice(float $apiPrice) : self
     {
-        $this->apiPrice = floatval($apiPrice);
+        $this->apiPrice = $apiPrice;
         
         return $this;
     }
     
     
     /**
-     * 获取状态
+     * 获取支付状态
      * @return bool
      */
-    public function isStatus()
+    public function isStatus() : bool
     {
         return $this->status;
     }
     
     
     /**
-     * 设置状态
+     * 设置支付状态
      * @param bool $status
      * @return $this
      */
-    public function setStatus($status)
+    public function setStatus(bool $status) : self
     {
-        $this->status = Transform::dataToBool($status);
+        $this->status = $status;
         
         return $this;
     }
@@ -119,27 +140,21 @@ class PayCreateSyncReturn
      * 获取错误消息
      * @return string
      */
-    public function getMessage()
+    public function getErrorMessage() : string
     {
-        return $this->message;
+        return $this->errorMessage;
     }
     
     
     /**
      * 设置错误消息
-     * @param string $message
+     * @param string $errorMessage
      * @return $this
      */
-    public function setMessage($message)
+    public function setErrorMessage(string $errorMessage) : self
     {
-        $this->message = trim($message);
+        $this->errorMessage = trim($errorMessage);
         
         return $this;
-    }
-    
-    
-    public function toArray()
-    {
-        return get_object_vars($this);
     }
 }

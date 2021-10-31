@@ -1,23 +1,24 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
-use BusyPHP\exception\AppException;
-use BusyPHP\trade\model\pay\TradePayField;
+use BusyPHP\trade\model\pay\TradePayInfo;
+use Exception;
 
 /**
  * 支付下单统一接口类，所有的支付下单均需要集成该接口
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/7/8 下午6:34 下午 PayCreate.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/22 下午下午4:22 PayCreate.php $
  */
 interface PayCreate
 {
     /**
      * 设置交易信息
-     * @param TradePayField $tradeInfo
+     * @param TradePayInfo $tradeInfo
      */
-    public function setTradeInfo(TradePayField $tradeInfo);
+    public function setTradeInfo(TradePayInfo $tradeInfo);
     
     
     /**
@@ -30,7 +31,6 @@ interface PayCreate
     /**
      * 设置异步回调地址
      * @param string $notifyUrl
-     * @throws AppException
      */
     public function setNotifyUrl(string $notifyUrl);
     
@@ -51,8 +51,8 @@ interface PayCreate
     
     /**
      * 执行下单
-     * @return mixed|void
-     * @throws AppException
+     * @return mixed 不同支付方式返回内容不同
+     * @throws Exception
      */
     public function create();
     
@@ -60,7 +60,7 @@ interface PayCreate
     /**
      * 解析同步返回结果
      * @return PayCreateSyncReturn
-     * @throws AppException
+     * @throws Exception
      */
     public function syncReturn() : PayCreateSyncReturn;
 }
