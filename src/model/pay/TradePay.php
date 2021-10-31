@@ -28,6 +28,7 @@ use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\exception\ClassNotFoundException;
 use think\exception\HttpException;
+use think\facade\Route;
 use think\Response;
 
 /**
@@ -314,6 +315,15 @@ class TradePay extends Model
         // 赋值模型
         $model->setTradeInfo($this->getInfo($this->createOrder($data)));
         
+        // 设置异步回调地址
+        $payTypeVar = $this->getTradeConfig('var_pay_type', 'pay_type');
+        $host       = $this->getTradeConfig('host', '') ?: true;
+        $ssl        = $this->getTradeConfig('ssl', false);
+        $model->setNotifyUrl(Route::buildUrl("/service/plugins/trade/notify/pay/{$payTypeVar}/{$payType}")
+            ->domain($host)
+            ->https($ssl)
+            ->build());
+        
         return $model;
     }
     
@@ -382,9 +392,9 @@ class TradePay extends Model
         }
         
         $payName = $payTypes[$payType]['name'] ?: $payType;
+        self::log($tag)->info("收到支付类型为: {$payName}");
+        
         try {
-            self::log($tag)->info("支付类型为: {$payName}");
-            
             $class = $this->getTradeConfig("apis.{$payType}.notify", '');
             if (!$class || !class_exists($class)) {
                 throw new ClassNotFoundException("{$payName}对应的支付类型{$payType}异步处理程序不存在", $class);

@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace BusyPHP\trade\model\refund;
 
+use BusyPHP\App;
 use BusyPHP\app\admin\model\system\lock\SystemLock;
 use BusyPHP\exception\ClassNotFoundException;
 use BusyPHP\exception\ClassNotImplementsException;
@@ -25,6 +26,7 @@ use RuntimeException;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\exception\HttpException;
+use think\facade\Route;
 use think\Response;
 
 /**
@@ -307,19 +309,16 @@ class TradeRefund extends Model
                 }
                 
                 // 执行三方退款
-                $refundNotifyUrl = $this->getTradeConfig('refund_notify_url', '');
-                if (!$refundNotifyUrl) {
-                    throw new VerifyException('没有配置退款异步通知地址', 'refund_notify_url');
-                }
-                if (false === strpos($refundNotifyUrl, '://')) {
-                    throw new VerifyException('退款异步通知地址必须包含http://或https://前缀');
-                }
-                if (false === strpos($refundNotifyUrl, '__TYPE__')) {
-                    throw new VerifyException('退款异步通知地址必须包含__TYPE__变量', 'refund_notify_url');
-                }
-                
                 $api->setTradeRefundInfo($info);
-                $api->setNotifyUrl(str_replace('__TYPE__', $payType, $refundNotifyUrl));
+                
+                // 设置异步通知地址
+                $payTypeVar = $this->getTradeConfig('var_pay_type', 'pay_type');
+                $host       = $this->getTradeConfig('host', '') ?: true;
+                $ssl        = $this->getTradeConfig('ssl', false);
+                $api->setNotifyUrl(Route::buildUrl("/service/plugins/trade/notify/refund/{$payTypeVar}/{$payType}")
+                    ->domain($host)
+                    ->https($ssl)
+                    ->build());
                 $result = $api->refund();
                 
                 // 需要重新处理
@@ -445,20 +444,24 @@ class TradeRefund extends Model
      * 异步通知处理
      * @param int $payType 支付类型
      * @return Response
-     * @throws Exception
      */
-    public function notify(int $payType) : Response
+    public function notify(int $payType = 0) : Response
     {
-        $tag = '退款异步通知';
+        // 获取支付类型
         if (!$payType) {
-            $message = '收到三方退款异步通知, 但无法获取支付类型';
+            $var     = $this->getTradeConfig('var_pay_type', 'pay_type');
+            $payType = App::init()->request->param("{$var}/d", 0);
+        }
+        
+        $tag      = '退款异步通知';
+        $payTypes = TradePay::init()->getPayTypes();
+        if (!isset($payTypes[$payType])) {
+            $message = "支付类型为 {$payType}，但无法识别该支付类型";
             self::log($tag, __METHOD__)->error($message);
-            
             throw new HttpException(503, $message);
         }
         
-        $payTypes = TradePay::init()->getPayTypes();
-        $payName  = $payTypes[$payType]['name'] ?: $payType;
+        $payName = $payTypes[$payType]['name'] ?: $payType;
         self::log($tag)->info("收到支付类型为: {$payName}");
         
         try {
