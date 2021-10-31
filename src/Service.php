@@ -19,6 +19,9 @@ class Service extends \think\Service
 {
     use TradeConfig;
     
+    const URL_NOTIFY_PATH = 'service/plugins/trade/notify/';
+    
+    
     public function boot()
     {
         $this->registerRoutes(function(Route $route) {
@@ -27,7 +30,7 @@ class Service extends \think\Service
             $route->rule('general/plugin/install/trade', InstallController::class . '@index');
             
             // 注册异步通知路由
-            $route->rule("service/plugins/trade/notify/{$actionPattern}", NotifyController::class . "@{$actionPattern}")
+            $route->rule(self::URL_NOTIFY_PATH . "{$actionPattern}", NotifyController::class . "@{$actionPattern}")
                 ->append([
                     BaseService::ROUTE_VAR_TYPE    => 'plugin',
                     BaseService::ROUTE_VAR_CONTROL => 'notify',

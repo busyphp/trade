@@ -20,6 +20,7 @@ use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\pay\TradePay;
 use BusyPHP\trade\model\pay\TradePayInfo;
 use BusyPHP\trade\model\TradeConfig;
+use BusyPHP\trade\Service;
 use DomainException;
 use Exception;
 use RuntimeException;
@@ -28,6 +29,7 @@ use think\db\exception\DbException;
 use think\exception\HttpException;
 use think\facade\Route;
 use think\Response;
+use think\route\Url;
 
 /**
  * 交易退款模型
@@ -279,6 +281,23 @@ class TradeRefund extends Model
     
     
     /**
+     * 生成异步通知地址
+     * @param int $payType
+     * @return Url
+     */
+    public function createNotifyUrl(int $payType) : Url
+    {
+        $payTypeVar = $this->getTradeConfig('var_pay_type', 'pay_type');
+        $host       = $this->getTradeConfig('host', '') ?: true;
+        $ssl        = $this->getTradeConfig('ssl', false);
+        
+        return Route::buildUrl('/' . Service::URL_NOTIFY_PATH . "refund/{$payTypeVar}/{$payType}")
+            ->domain($host)
+            ->https($ssl);
+    }
+    
+    
+    /**
      * 执行单步三方退款
      * @param int $id 订单ID
      * @throws Exception
@@ -310,15 +329,7 @@ class TradeRefund extends Model
                 
                 // 执行三方退款
                 $api->setTradeRefundInfo($info);
-                
-                // 设置异步通知地址
-                $payTypeVar = $this->getTradeConfig('var_pay_type', 'pay_type');
-                $host       = $this->getTradeConfig('host', '') ?: true;
-                $ssl        = $this->getTradeConfig('ssl', false);
-                $api->setNotifyUrl(Route::buildUrl("/service/plugins/trade/notify/refund/{$payTypeVar}/{$payType}")
-                    ->domain($host)
-                    ->https($ssl)
-                    ->build());
+                $api->setNotifyUrl($this->createNotifyUrl($payType)->build());
                 $result = $api->refund();
                 
                 // 需要重新处理

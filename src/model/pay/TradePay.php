@@ -19,6 +19,7 @@ use BusyPHP\trade\interfaces\TradeMemberModel;
 use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\TradeConfig;
+use BusyPHP\trade\Service;
 use Closure;
 use Exception;
 use LogicException;
@@ -30,6 +31,7 @@ use think\exception\ClassNotFoundException;
 use think\exception\HttpException;
 use think\facade\Route;
 use think\Response;
+use think\route\Url;
 
 /**
  * 系统支付订单模型
@@ -294,8 +296,8 @@ class TradePay extends Model
             throw new ClassNotFoundException("该支付方式[ {$payType} ]未绑定支付接口", $class);
         }
         
-        $model = new $class();
-        if (!$model instanceof PayCreate) {
+        $create = new $class();
+        if (!$create instanceof PayCreate) {
             throw new ClassNotImplementsException($class, PayCreate::class, '支付接口类');
         }
         
@@ -313,18 +315,27 @@ class TradePay extends Model
         $data->title        = $payData->getBody();
         
         // 赋值模型
-        $model->setTradeInfo($this->getInfo($this->createOrder($data)));
+        $create->setTradeInfo($this->getInfo($this->createOrder($data)));
+        $create->setNotifyUrl($this->createNotifyUrl($payType)->build());
         
-        // 设置异步回调地址
+        return $create;
+    }
+    
+    
+    /**
+     * 生成异步通知地址
+     * @param int $payType
+     * @return Url
+     */
+    public function createNotifyUrl(int $payType) : Url
+    {
         $payTypeVar = $this->getTradeConfig('var_pay_type', 'pay_type');
         $host       = $this->getTradeConfig('host', '') ?: true;
         $ssl        = $this->getTradeConfig('ssl', false);
-        $model->setNotifyUrl(Route::buildUrl("/service/plugins/trade/notify/pay/{$payTypeVar}/{$payType}")
-            ->domain($host)
-            ->https($ssl)
-            ->build());
         
-        return $model;
+        return Route::buildUrl('/' . Service::URL_NOTIFY_PATH . "pay/{$payTypeVar}/{$payType}")
+            ->domain($host)
+            ->https($ssl);
     }
     
     
