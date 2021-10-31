@@ -1,15 +1,16 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\model\no;
 
-use BusyPHP\exception\SQLException;
 use BusyPHP\Model;
+use think\db\exception\DbException;
 
 /**
  * 交易号分配模型
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/6/17 下午4:41 下午 TradeNo.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/22 下午下午3:38 TradeNo.php $
  */
 class TradeNo extends Model
 {
@@ -17,15 +18,12 @@ class TradeNo extends Model
      * 获取交易号
      * @param string|true $prefix 前缀，输入true则返回id自己处理
      * @return string 返回18位+前缀长度的交易号 = 22位
-     * @throws SQLException
+     * @throws DbException
      */
-    public function get($prefix)
+    public function get($prefix) : string
     {
-        if (!$lastId = $this->addData(['create_time' => time()])) {
-            throw new SQLException('交易号生成失败[' . $prefix . ']', $this);
-        }
-        
-        //$this->deleteData($lastId);
+        $lastId = $this->addData(['create_time' => time()]);
+        $this->deleteInfo($lastId);
         
         if (true === $prefix) {
             return $lastId;
@@ -41,12 +39,12 @@ class TradeNo extends Model
     
     
     /**
-     * 通过订单号解析出订单类型
-     * @param string $tradeNo
+     * 通过交易号号解析出订单类型
+     * @param string $tradeNo 交易号
      * @return int
      */
-    public static function getType($tradeNo)
+    public static function getType(string $tradeNo) : int
     {
-        return intval(substr($tradeNo, 0, 4));
+        return intval(substr((string) $tradeNo, 0, 4));
     }
 }
