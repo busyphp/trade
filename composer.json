@@ -1,17 +1,17 @@
 {
 	"name"        : "busyphp/trade",
 	"type"        : "library",
-	"description" : "",
+	"description" : "用于支付、退款、转账等操作",
 	"authors"     : [
 		{
 			"name"  : "busy^life",
 			"email" : "busy.life@qq.com"
 		}
 	],
-	"license"     : "Apache-2.0",
+	"license"     : "CC-BY-NC-4.0",
 	"require"     : {
 		"php"             : ">=7.1.0",
-		"busyphp/busyphp" : "^3.0.5",
+		"busyphp/busyphp" : "^6.0",
 		"ext-json"        : "*"
 	},
 	"require-dev" : {
@@ -19,9 +19,7 @@
 	},
 	"autoload"    : {
 		"psr-4" : {
-			"BusyPHP\\trade\\" : "src",
-			"app\\"            : "app",
-			"core\\"           : "core"
+			"BusyPHP\\trade\\" : "src"
 		}
 	},
 	"extra"       : {
@@ -30,7 +28,7 @@
 				"BusyPHP\\trade\\Service"
 			],
 			"config"   : {
-				"trade" : "src/config.php"
+				"trade" : "src/config/config.php"
 			}
 		}
 	},
