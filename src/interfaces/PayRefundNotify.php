@@ -1,24 +1,24 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
-use BusyPHP\exception\AppException;
+use Exception;
 use think\Response;
 use Throwable;
-
 
 /**
  * 支付退款异步回调处理接口，所有退款异步回调都需要集成该接口
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/7/8 下午6:46 下午 PayRefundNotify.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午1:20 PayRefundNotify.php $
  */
 interface PayRefundNotify
 {
     /**
      * 执行校验
      * @return PayRefundNotifyResult
-     * @throws AppException
+     * @throws Exception
      */
     public function notify() : PayRefundNotifyResult;
     
@@ -33,14 +33,22 @@ interface PayRefundNotify
     
     /**
      * 成功通知，不要抛出异常
+     * @param bool $status true 退款操作成功，false 属于重复通知，该订单已退款
      * @return Response
      */
-    public function onSuccess() : Response;
+    public function onSuccess(bool $status) : Response;
     
     
     /**
-     * 获取请求参数字符
+     * 获取源请求参数
      * @return string
      */
-    public function getRequestString();
+    public function getRequestSourceParams() : string;
+    
+    
+    /**
+     * 获取解析后的请求参数
+     * @return array
+     */
+    public function getRequestParams() : array;
 }

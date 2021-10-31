@@ -24,7 +24,7 @@ interface PayNotify
     
     
     /**
-     * 失败通知
+     * 失败通知，不要抛出异常
      * @param Throwable $e
      * @return Response
      */
@@ -32,11 +32,11 @@ interface PayNotify
     
     
     /**
-     * 成功通知
-     * @param bool $payStatus true 支付成功，false 属于重复通知，该订单已支付
+     * 成功通知，不要抛出异常
+     * @param bool $status true 支付操作成功，false 属于重复通知，该订单已支付
      * @return Response
      */
-    public function onSuccess(bool $payStatus) : Response;
+    public function onSuccess(bool $status) : Response;
     
     
     /**
