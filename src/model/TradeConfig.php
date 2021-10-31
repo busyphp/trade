@@ -7,9 +7,8 @@ use BusyPHP\App;
 /**
  * 配置
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/10/12 下午9:00 上午 TradeConfig.php $
- * @property App $app
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午下午12:51 TradeConfig.php $
  */
 trait TradeConfig
 {
@@ -24,24 +23,13 @@ trait TradeConfig
      */
     public function getTradeConfig($name, $default = null)
     {
+        $app = App::init();
         if (!$this->isLoad) {
-            $this->app->config->load($this->app->getRootPath() . 'config' . DIRECTORY_SEPARATOR . 'extend' . DIRECTORY_SEPARATOR . 'trade.php', 'trade');
+            $app->config->load($app->getRootPath() . 'config' . DIRECTORY_SEPARATOR . 'extend' . DIRECTORY_SEPARATOR . 'trade.php', 'trade');
             
             $this->isLoad = true;
         }
         
-        return $this->app->config->get('trade.' . $name, $default);
-    }
-    
-    
-    public function getTradeConfigAdminMenuModule()
-    {
-        return $this->getTradeConfig('admin.menu.module', '');
-    }
-    
-    
-    public function getTradeConfigAdminMenuControl()
-    {
-        return $this->getTradeConfig('admin.menu.control', '');
+        return $app->config->get('trade.' . $name, $default);
     }
 }
