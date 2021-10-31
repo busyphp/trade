@@ -8,8 +8,8 @@ use Exception;
 /**
  * 支付退款结果查询接口类
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/7/8 下午6:39 下午 PayRefundQuery.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午1:21 PayRefundQuery.php $
  */
 interface PayRefundQuery
 {
@@ -22,8 +22,8 @@ interface PayRefundQuery
     
     /**
      * 执行查询
-     * @return PayRefundNotifyResult
+     * @return PayRefundQueryResult
      * @throws Exception
      */
-    public function query() : PayRefundNotifyResult;
+    public function query() : PayRefundQueryResult;
 }
