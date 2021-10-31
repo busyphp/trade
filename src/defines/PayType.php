@@ -1,12 +1,12 @@
 <?php
 
-namespace BusyPHP\trade\model\pay;
+namespace BusyPHP\trade\defines;
 
 /**
- * 支付类型
+ * 常用支付类型定义
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/7/8 下午10:23 下午 PayType.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午11:05 PayType.php $
  */
 class PayType
 {
