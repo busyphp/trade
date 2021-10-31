@@ -1,25 +1,26 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
-use BusyPHP\exception\AppException;
+use Exception;
 use think\Response;
 use Throwable;
 
 /**
  * 支付异步回调处理接口，所有异步回调都需要集成该接口
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/7/8 下午6:37 下午 PayNotify.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午1:19 PayNotify.php $
  */
 interface PayNotify
 {
     /**
-     * 执行校验
+     * 执行异步通知
      * @return PayNotifyResult
-     * @throws AppException
+     * @throws Exception
      */
-    public function notify();
+    public function notify() : PayNotifyResult;
     
     
     /**
@@ -32,28 +33,28 @@ interface PayNotify
     
     /**
      * 成功通知
-     * @param bool $payStatus true 支付成功，false 之前已支付，属于重复性的操作
+     * @param bool $payStatus true 支付成功，false 属于重复通知，该订单已支付
      * @return Response
      */
     public function onSuccess(bool $payStatus) : Response;
     
     
     /**
-     * 获取请求参数
-     * @return array
-     */
-    public function getRequestParams();
-    
-    
-    /**
-     * 获取请求参数字符
+     * 获取源请求参数
      * @return string
      */
-    public function getRequestString();
+    public function getRequestSourceParams() : string;
     
     
     /**
-     * 获取平台支付订单号
+     * 获取解析后的请求参数
+     * @return array
+     */
+    public function getRequestParams() : array;
+    
+    
+    /**
+     * 获取平台交易单号
      * @return string
      */
     public function getPayTradeNo();

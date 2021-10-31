@@ -1,33 +1,66 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
+
+use BusyPHP\model\ObjectOption;
 
 /**
  * 支付异步返回结构
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/10/10 下午12:25 下午 PayNotifyResult.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/27 下午下午9:28 PayNotifyResult.php $
  */
-class PayNotifyResult
+class PayNotifyResult extends ObjectOption
 {
-    private $payTradeNo  = '';
+    /**
+     * 平台支付单号
+     * @var string
+     */
+    private $payTradeNo = '';
     
-    private $apiTradeNo  = '';
+    /**
+     * 三方支付单号
+     * @var string
+     */
+    private $apiTradeNo = '';
     
-    private $apiPrice    = 0;
+    /**
+     * 真实支付金额
+     * @var float
+     */
+    private $apiPrice = 0;
     
-    private $apiBankName = '';
+    /**
+     * 支付描述
+     * @var string
+     */
+    private $payRemark = '';
     
-    private $attach      = '';
+    /**
+     * 支付附加数据
+     * @var string
+     */
+    private $attach = '';
     
-    private $payType     = 0;
+    /**
+     * 支付类型
+     * @var int
+     */
+    private $payType = 0;
+    
+    /**
+     * 支付时间戳
+     * @var int
+     */
+    private $payTime = 0;
     
     
     /**
      * 获取平台支付订单号
      * @return string
      */
-    public function getPayTradeNo()
+    public function getPayTradeNo() : string
     {
         return $this->payTradeNo;
     }
@@ -38,7 +71,7 @@ class PayNotifyResult
      * @param string $payTradeNo
      * @return $this
      */
-    public function setPayTradeNo($payTradeNo)
+    public function setPayTradeNo(string $payTradeNo) : self
     {
         $this->payTradeNo = trim($payTradeNo);
         
@@ -50,7 +83,7 @@ class PayNotifyResult
      * 获取三方支付订单号
      * @return string
      */
-    public function getApiTradeNo()
+    public function getApiTradeNo() : string
     {
         return $this->apiTradeNo;
     }
@@ -61,7 +94,7 @@ class PayNotifyResult
      * @param string $apiTradeNo
      * @return $this
      */
-    public function setApiTradeNo($apiTradeNo)
+    public function setApiTradeNo(string $apiTradeNo) : self
     {
         $this->apiTradeNo = trim($apiTradeNo);
         
@@ -73,7 +106,7 @@ class PayNotifyResult
      * 获取支付金额
      * @return float
      */
-    public function getApiPrice()
+    public function getApiPrice() : float
     {
         return $this->apiPrice;
     }
@@ -81,12 +114,12 @@ class PayNotifyResult
     
     /**
      * 设置支付金额
-     * @param int $apiPrice
+     * @param float $apiPrice
      * @return $this
      */
-    public function setApiPrice($apiPrice)
+    public function setApiPrice(float $apiPrice) : self
     {
-        $this->apiPrice = floatval($apiPrice);
+        $this->apiPrice = $apiPrice;
         
         return $this;
     }
@@ -96,20 +129,20 @@ class PayNotifyResult
      * 获取支付银行名称
      * @return string
      */
-    public function getApiBankName()
+    public function getPayRemark() : string
     {
-        return $this->apiBankName;
+        return $this->payRemark;
     }
     
     
     /**
      * 设置支付银行名称
-     * @param string $apiBankName
+     * @param string $payRemark
      * @return $this
      */
-    public function setApiBankName($apiBankName)
+    public function setPayRemark(string $payRemark) : self
     {
-        $this->apiBankName = trim($apiBankName);
+        $this->payRemark = trim($payRemark);
         
         return $this;
     }
@@ -119,7 +152,7 @@ class PayNotifyResult
      * 获取附加数据，下单的时候会传递并原样返回
      * @return string
      */
-    public function getAttach()
+    public function getAttach() : string
     {
         return $this->attach;
     }
@@ -130,7 +163,7 @@ class PayNotifyResult
      * @param string $attach
      * @return $this
      */
-    public function setAttach($attach)
+    public function setAttach(string $attach) : self
     {
         $this->attach = trim($attach);
         
@@ -142,7 +175,7 @@ class PayNotifyResult
      * 获取支付方式
      * @return int
      */
-    public function getPayType()
+    public function getPayType() : int
     {
         return $this->payType;
     }
@@ -153,16 +186,44 @@ class PayNotifyResult
      * @param int $payType
      * @return $this
      */
-    public function setPayType($payType)
+    public function setPayType(int $payType) : self
     {
-        $this->payType = intval($payType);
+        $this->payType = $payType;
         
         return $this;
     }
     
     
-    public function toArray()
+    /**
+     * 获取支付成功时间
+     * @return int
+     */
+    public function getPayTime() : int
     {
-        return get_object_vars($this);
+        return $this->payTime;
+    }
+    
+    
+    /**
+     * 设置支付成功时间
+     * @param int $payTime
+     * @return $this
+     */
+    public function setPayTime(int $payTime) : self
+    {
+        $this->payTime = $payTime;
+        
+        return $this;
+    }
+    
+    
+    /**
+     * 设置支付成功时间
+     * @param string $date
+     * @return $this
+     */
+    public function setPayDate(string $date) : self
+    {
+        return $this->setPayTime((int) strtotime($date));
     }
 }
