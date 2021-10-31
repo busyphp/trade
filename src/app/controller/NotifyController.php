@@ -6,7 +6,6 @@ namespace BusyPHP\trade\app\controller;
 use BusyPHP\Controller;
 use BusyPHP\trade\model\pay\TradePay;
 use BusyPHP\trade\model\refund\TradeRefund;
-use BusyPHP\trade\model\TradeConfig;
 use think\Response;
 
 /**
@@ -17,8 +16,6 @@ use think\Response;
  */
 class NotifyController extends Controller
 {
-    use TradeConfig;
-    
     /**
      * 支付异步通知
      * @return Response
