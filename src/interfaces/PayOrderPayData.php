@@ -2,28 +2,46 @@
 
 namespace BusyPHP\trade\interfaces;
 
+use BusyPHP\model\ObjectOption;
+
 /**
  * 支付下单需要需要的数据结构
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/10/10 下午12:26 下午 PayOrderPayData.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/10/31 下午上午1:20 PayOrderPayData.php $
  */
-class PayOrderPayData
+class PayOrderPayData extends ObjectOption
 {
-    private $body         = '';
+    /**
+     * 支付商品信息
+     * @var string
+     */
+    private $body = '';
     
+    /**
+     * 业务订单号
+     * @var string
+     */
     private $orderTradeNo = '';
     
-    private $price        = 0;
+    /**
+     * 支付金额
+     * @var float
+     */
+    private $price = 0;
     
-    private $isPay        = false;
+    /**
+     * 是否已支付
+     * @var bool
+     */
+    private $pay = false;
     
     
     /**
      * 获取支付商品信息
      * @return string
      */
-    public function getBody()
+    public function getBody() : string
     {
         return $this->body;
     }
@@ -34,7 +52,7 @@ class PayOrderPayData
      * @param string $body
      * @return $this
      */
-    public function setBody($body)
+    public function setBody(string $body) : self
     {
         $this->body = trim($body);
         
@@ -46,7 +64,7 @@ class PayOrderPayData
      * 获取平台支付订单号
      * @return string
      */
-    public function getOrderTradeNo()
+    public function getOrderTradeNo() : string
     {
         return $this->orderTradeNo;
     }
@@ -57,7 +75,7 @@ class PayOrderPayData
      * @param string $orderTradeNo
      * @return $this
      */
-    public function setOrderTradeNo($orderTradeNo)
+    public function setOrderTradeNo(string $orderTradeNo) : self
     {
         $this->orderTradeNo = trim($orderTradeNo);
         
@@ -67,9 +85,9 @@ class PayOrderPayData
     
     /**
      * 获取支付金额
-     * @return string
+     * @return float
      */
-    public function getPrice()
+    public function getPrice() : float
     {
         return $this->price;
     }
@@ -77,12 +95,12 @@ class PayOrderPayData
     
     /**
      * 设置支付金额，单位元，保留2位小数
-     * @param string $price
+     * @param float $price
      * @return $this
      */
-    public function setPrice($price)
+    public function setPrice(float $price) : self
     {
-        $this->price = floatval($price);
+        $this->price = $price;
         
         return $this;
     }
@@ -90,20 +108,23 @@ class PayOrderPayData
     
     /**
      * 设置是否已支付
-     * @param bool $isPay
+     * @param bool $pay
+     * @return $this
      */
-    public function setIsPay($isPay)
+    public function setPay(bool $pay) : self
     {
-        $this->isPay = $isPay;
+        $this->pay = $pay;
+        
+        return $this;
     }
     
     
     /**
-     * 获取是否已支付
+     * 是否已支付
      * @return bool
      */
-    public function isPay()
+    public function isPay() : bool
     {
-        return $this->isPay;
+        return $this->pay;
     }
 }
