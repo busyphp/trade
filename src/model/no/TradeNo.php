@@ -23,7 +23,7 @@ class TradeNo extends Model
     public function get($prefix) : string
     {
         $lastId = $this->addData(['create_time' => time()]);
-        $this->deleteInfo($lastId);
+        $this->deleteInfo($lastId - 1);
         
         if (true === $prefix) {
             return $lastId;
