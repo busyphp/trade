@@ -1,14 +1,21 @@
 <?php
+declare(strict_types = 1);
 
 namespace BusyPHP\trade\app\controller;
 
 use BusyPHP\app\admin\controller\AdminController;
 use BusyPHP\app\admin\model\admin\group\AdminGroup;
+use BusyPHP\app\admin\model\admin\user\AdminUserInfo;
+use BusyPHP\app\admin\plugin\table\TableHandler;
+use BusyPHP\app\admin\plugin\TablePlugin;
 use BusyPHP\exception\VerifyException;
 use BusyPHP\helper\TransHelper;
+use BusyPHP\Model;
 use BusyPHP\model\Map;
 use BusyPHP\trade\interfaces\PayNotifyResult;
 use BusyPHP\trade\interfaces\PayRefundNotifyResult;
+use BusyPHP\trade\interfaces\TradeMemberModel;
+use BusyPHP\trade\interfaces\TradeMemberParams;
 use BusyPHP\trade\model\pay\TradePay;
 use BusyPHP\trade\model\pay\TradePayExtendInfo;
 use BusyPHP\trade\model\pay\TradePayField;
@@ -22,10 +29,10 @@ use think\db\exception\DbException;
 use think\Response;
 
 /**
- * 支付订单管理
+ * 交易管理
  * @author busy^life <busy.life@qq.com>
- * @copyright (c) 2015--2019 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
- * @version $Id: 2020/6/17 下午4:32 下午 Finance.php $
+ * @copyright (c) 2015--2021 ShanXi Han Tuo Technology Co.,Ltd. All rights reserved.
+ * @version $Id: 2021/11/2 下午下午5:05 TradeController.php $
  */
 class TradeController extends AdminController
 {
@@ -44,56 +51,112 @@ class TradeController extends AdminController
         $timeRange   = date('Y-m-d 00:00:00', strtotime('-29 days')) . ' - ' . date('Y-m-d 23:59:59');
         if ($this->pluginTable) {
             $this->pluginTable->isExtend = true;
-            $this->pluginTable->setQueryHandler(function(TradePay $model, Map $data) use ($timeRange, $memberModel, $userParams) {
-                // 支付方式
-                if ($data->get('pay_type', 0) == 0) {
-                    $data->remove('pay_type');
+            $this->pluginTable->setHandler(new class($timeRange, $memberModel, $userParams, $this->adminUser) extends TableHandler {
+                /**
+                 * @var string
+                 */
+                private $timeRange;
+                
+                /**
+                 * @var TradeMemberModel
+                 */
+                private $memberModel;
+                
+                /**
+                 * @var TradeMemberParams
+                 */
+                private $userParams;
+                
+                /**
+                 * @var AdminUserInfo
+                 */
+                private $adminUserInfo;
+                
+                
+                public function __construct(string $timeRange, TradeMemberModel $memberModel, TradeMemberParams $userParams, AdminUserInfo $adminUserInfo)
+                {
+                    $this->timeRange     = $timeRange;
+                    $this->memberModel   = $memberModel;
+                    $this->userParams    = $userParams;
+                    $this->adminUserInfo = $adminUserInfo;
                 }
                 
-                // 支付状态
-                switch ($data->get('status', 0)) {
-                    case 1:
-                        $model->whereEntity(TradePayField::payTime('>', 0));
-                    break;
-                    case 2:
-                        $model->whereEntity(TradePayField::payTime(0));
-                    break;
-                    case 3:
-                        $model->whereEntity(TradePayField::payTime('>', 0));
-                        $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())
-                            ->setValueToRaw(true));
-                    break;
-                }
-                $data->remove('status');
                 
-                // 业务状态
-                switch ($data->get('order_status', 0)) {
-                    case 1:
-                        $model->whereEntity(TradePayField::orderStatus(TradePay::ORDER_STATUS_SUCCESS));
-                    break;
-                    case 2:
-                        $model->whereEntity(TradePayField::orderStatus(TradePay::ORDER_STATUS_FAIL));
-                    break;
+                public function field(Model $model, string $field, string $word, string $op, string $sourceWord) : string
+                {
+                    if (0 === stripos($field, '_user_')) {
+                        $field = substr($field, 6);
+                        
+                        $model->whereEntity(TradePayField::userId('in', $this->memberModel->field($this->userParams->getIdField())
+                            ->where($field, $op, $word)
+                            ->buildSql())->setValueToRaw(true));
+                        
+                        return '';
+                    }
+                    
+                    return $field;
                 }
-                $data->remove('order_status');
                 
-                // 时间范围
-                if ($time = $data->get('time', $timeRange)) {
-                    $model->whereTimeIntervalRange(TradePayField::createTime(), $time, ' - ', true);
+                
+                public function query(TablePlugin $plugin, Model $model, Map $data) : void
+                {
+                    // 支付方式
+                    if ($data->get('pay_type', 0) == 0) {
+                        $data->remove('pay_type');
+                    }
+                    
+                    // 支付状态
+                    switch ($data->get('status', 0)) {
+                        case 1:
+                            $model->whereEntity(TradePayField::payTime('>', 0));
+                        break;
+                        case 2:
+                            $model->whereEntity(TradePayField::payTime(0));
+                        break;
+                        case 3:
+                            $model->whereEntity(TradePayField::payTime('>', 0));
+                            $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())
+                                ->setValueToRaw(true));
+                        break;
+                    }
+                    $data->remove('status');
+                    
+                    // 业务状态
+                    switch ($data->get('order_status', 0)) {
+                        case 1:
+                            $model->whereEntity(TradePayField::orderStatus(TradePay::ORDER_STATUS_SUCCESS));
+                        break;
+                        case 2:
+                            $model->whereEntity(TradePayField::orderStatus(TradePay::ORDER_STATUS_FAIL));
+                        break;
+                    }
+                    $data->remove('order_status');
+                    
+                    // 时间范围
+                    if ($time = $data->get('time', $this->timeRange)) {
+                        $model->whereTimeIntervalRange(TradePayField::createTime(), $time, ' - ', true);
+                    }
+                    $data->remove('time');
                 }
-                $data->remove('time');
-            });
-            
-            $this->pluginTable->setListHandler(function(array &$list) {
-                $canPaySuccess   = AdminGroup::checkPermission($this->adminUser, 'pay_success');
-                $canOrderSuccess = AdminGroup::checkPermission($this->adminUser, 'pay_order_success');
-                $canRefund       = AdminGroup::checkPermission($this->adminUser, 'pay_apply_refund');
                 
-                /** @var TradePayExtendInfo $item */
-                foreach ($list as $item) {
-                    $item->canPaySuccess   = $item->canPaySuccess && $canPaySuccess;
-                    $item->canOrderSuccess = $item->canOrderSuccess && $canOrderSuccess;
-                    $item->canRefund       = $item->canRefund && $canRefund;
+                
+                /**
+                 * @param TradePayExtendInfo[] $list
+                 * @return array|null
+                 */
+                public function list(array &$list) : ?array
+                {
+                    $canPaySuccess   = AdminGroup::checkPermission($this->adminUserInfo, 'pay_success');
+                    $canOrderSuccess = AdminGroup::checkPermission($this->adminUserInfo, 'pay_order_success');
+                    $canRefund       = AdminGroup::checkPermission($this->adminUserInfo, 'pay_apply_refund');
+                    
+                    foreach ($list as $item) {
+                        $item->canPaySuccess   = $item->canPaySuccess && $canPaySuccess;
+                        $item->canOrderSuccess = $item->canOrderSuccess && $canOrderSuccess;
+                        $item->canRefund       = $item->canRefund && $canRefund;
+                    }
+                    
+                    return null;
                 }
             });
             
@@ -234,50 +297,107 @@ class TradeController extends AdminController
         $timeRange   = date('Y-m-d 00:00:00', strtotime('-29 days')) . ' - ' . date('Y-m-d 23:59:59');
         if ($this->pluginTable) {
             $this->pluginTable->isExtend = true;
-            $this->pluginTable->setQueryHandler(function(TradeRefund $model, Map $data) use ($timeRange) {
-                // 支付方式
-                if ($data->get('pay_type', 0) == 0) {
-                    $data->remove('pay_type');
-                }
-                
-                // 支付状态
-                switch ($data->get('status', 0)) {
-                    case 1:
-                        $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_SUCCESS));
-                    break;
-                    case 2:
-                        $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_FAIL));
-                    break;
-                    case 3:
-                        $model->whereEntity(TradeRefundField::status('in', [
-                            TradeRefund::REFUND_STATUS_WAIT,
-                            TradeRefund::REFUND_STATUS_PENDING,
-                            TradeRefund::REFUND_STATUS_IN_QUERY_QUEUE,
-                            TradeRefund::REFUND_STATUS_IN_REFUND_QUEUE,
-                        ]));
-                    break;
-                    case 4:
-                        $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_WAIT_MANUAL));
-                    break;
-                }
-                $data->remove('status');
-                
-                if ($time = $data->get('time', $timeRange)) {
-                    $model->whereTimeIntervalRange(TradePayField::createTime(), $time, ' - ', true);
-                }
-                $data->remove('time');
-            });
             
-            $this->pluginTable->setListHandler(function(array &$list) {
-                $canQuery   = AdminGroup::checkPermission($this->adminUser, 'refund_query');
-                $canRetry   = AdminGroup::checkPermission($this->adminUser, 'refund_retry');
-                $canSuccess = AdminGroup::checkPermission($this->adminUser, 'refund_success');
+            $this->pluginTable->setHandler(new class($timeRange, $memberModel, $userParams, $this->adminUser) extends TableHandler {
+                /**
+                 * @var string
+                 */
+                private $timeRange;
                 
-                /** @var TradeRefundExtendInfo $item */
-                foreach ($list as $item) {
-                    $item->canQuery   = $item->canQuery && $canQuery;
-                    $item->canRetry   = $item->canRetry && $canRetry;
-                    $item->canSuccess = $item->canSuccess && $canSuccess;
+                /**
+                 * @var TradeMemberModel
+                 */
+                private $memberModel;
+                
+                /**
+                 * @var TradeMemberParams
+                 */
+                private $userParams;
+                
+                /**
+                 * @var AdminUserInfo
+                 */
+                private $adminUserInfo;
+                
+                
+                public function __construct(string $timeRange, TradeMemberModel $memberModel, TradeMemberParams $userParams, AdminUserInfo $adminUserInfo)
+                {
+                    $this->timeRange     = $timeRange;
+                    $this->memberModel   = $memberModel;
+                    $this->userParams    = $userParams;
+                    $this->adminUserInfo = $adminUserInfo;
+                }
+                
+                
+                public function field(Model $model, string $field, string $word, string $op, string $sourceWord) : string
+                {
+                    if (0 === stripos($field, '_user_')) {
+                        $field = substr($field, 6);
+                        
+                        $model->whereEntity(TradePayField::userId('in', $this->memberModel->field($this->userParams->getIdField())
+                            ->where($field, $op, $word)
+                            ->buildSql())->setValueToRaw(true));
+                        
+                        return '';
+                    }
+                    
+                    return $field;
+                }
+                
+                
+                public function query(TablePlugin $plugin, Model $model, Map $data) : void
+                {
+                    // 支付方式
+                    if ($data->get('pay_type', 0) == 0) {
+                        $data->remove('pay_type');
+                    }
+                    
+                    // 支付状态
+                    switch ($data->get('status', 0)) {
+                        case 1:
+                            $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_SUCCESS));
+                        break;
+                        case 2:
+                            $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_FAIL));
+                        break;
+                        case 3:
+                            $model->whereEntity(TradeRefundField::status('in', [
+                                TradeRefund::REFUND_STATUS_WAIT,
+                                TradeRefund::REFUND_STATUS_PENDING,
+                                TradeRefund::REFUND_STATUS_IN_QUERY_QUEUE,
+                                TradeRefund::REFUND_STATUS_IN_REFUND_QUEUE,
+                            ]));
+                        break;
+                        case 4:
+                            $model->whereEntity(TradeRefundField::status(TradeRefund::REFUND_STATUS_WAIT_MANUAL));
+                        break;
+                    }
+                    $data->remove('status');
+                    
+                    if ($time = $data->get('time', $this->timeRange)) {
+                        $model->whereTimeIntervalRange(TradePayField::createTime(), $time, ' - ', true);
+                    }
+                    $data->remove('time');
+                }
+                
+                
+                /**
+                 * @param TradeRefundExtendInfo[] $list
+                 * @return array|null
+                 */
+                public function list(array &$list) : ?array
+                {
+                    $canQuery   = AdminGroup::checkPermission($this->adminUserInfo, 'refund_query');
+                    $canRetry   = AdminGroup::checkPermission($this->adminUserInfo, 'refund_retry');
+                    $canSuccess = AdminGroup::checkPermission($this->adminUserInfo, 'refund_success');
+                    
+                    foreach ($list as $item) {
+                        $item->canQuery   = $item->canQuery && $canQuery;
+                        $item->canRetry   = $item->canRetry && $canRetry;
+                        $item->canSuccess = $item->canSuccess && $canSuccess;
+                    }
+                    
+                    return null;
                 }
             });
             
