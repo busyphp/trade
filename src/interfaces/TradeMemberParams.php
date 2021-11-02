@@ -16,6 +16,12 @@ use Closure;
 class TradeMemberParams extends ObjectOption
 {
     /**
+     * 用户ID字段
+     * @var Entity
+     */
+    private $idField;
+    
+    /**
      * 用户名字段
      * @var Entity
      */
@@ -54,15 +60,24 @@ class TradeMemberParams extends ObjectOption
     
     /**
      * TradeMemberParams constructor.
+     * @param string|Entity $idField 用户ID字段
      * @param string|Entity $usernameField 用户名字段名称
      * @param string|Entity $phoneField 用户手机号字段名称
      * @param string|Entity $nicknameField 用户昵称字段名称
      */
-    public function __construct($usernameField, $phoneField = null, $nicknameField = null)
+    public function __construct($idField, $usernameField, $phoneField = null, $nicknameField = null)
     {
+        if (!$idField) {
+            throw new ParamInvalidException('idField');
+        }
         if (!$usernameField) {
             throw new ParamInvalidException('usernameField');
         }
+        
+        if (!$idField instanceof Entity) {
+            $idField = Entity::init((string) $idField);
+        }
+        
         if (!$usernameField instanceof Entity) {
             $usernameField = Entity::init((string) $usernameField);
         }
@@ -75,6 +90,7 @@ class TradeMemberParams extends ObjectOption
             $phoneField = Entity::init((string) $phoneField);
         }
         
+        $this->idField       = $idField;
         $this->usernameField = $usernameField;
         $this->nicknameField = $nicknameField;
         $this->phoneField    = $phoneField;
@@ -121,6 +137,16 @@ class TradeMemberParams extends ObjectOption
         $this->emailField = $emailField;
         
         return $this;
+    }
+    
+    
+    /**
+     * 获取用户ID字段
+     * @return Entity
+     */
+    public function getIdField() : Entity
+    {
+        return $this->idField;
     }
     
     

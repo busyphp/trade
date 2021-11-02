@@ -1,0 +1,234 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <?php
+
+    use BusyPHP\trade\model\pay\TradePay;
+    use BusyPHP\trade\model\pay\TradePayExtendInfo;
+    
+    ?>
+
+    <div id="searchBar"
+         class="fieldset"
+         data-toggle="busy-search-bar"
+         data-url="{$url.self}"
+         data-accurate-show="true"
+         data-fields="<?=TradePayExtendInfo::payTradeNo()?>:平台交易单号,<?=TradePayExtendInfo::orderTradeNo()?>:平台业务单号,<?=TradePayExtendInfo::apiTradeNo()?>:三方支付单号,<?=TradePayExtendInfo::id()?>:订单ID,<?=TradePayExtendInfo::userId()?>:用户ID,{$query_fields}">
+        <script type="text/html" data-search-id="left">
+            <div class="form-group">
+                <div class="input-group">
+                    <div class="input-group-addon">时间范围</div>
+                    <input type="text" name="time" class="form-control date-ymdhis-range" value="{$time}" placeholder="不限时间范围" data-toggle="busy-date-picker" data-format="YYYY-MM-DD HH:mm:ss" data-range="true" readonly/>
+                    <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <div class="input-group-addon">支付方式</div>
+                    <select class="form-control" name="pay_type">
+                        <option value="0">不限</option>
+                        {$type_options}
+                        {$other_type_options}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <div class="input-group-addon">业务状态</div>
+                    <select class="form-control" name="order_status">
+                        <option value="0">不限</option>
+                        {$order_status_options}
+                    </select>
+                </div>
+            </div>
+        </script>
+    </div>
+
+    <ul class="nav nav-tabs nav-tabs-top nav-tabs-table-header">
+        <li<?=($_GET['static']['status'] ?? 0) == 0 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=0')}">全部记录</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 1 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=1')}">已支付</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 2 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=2')}">未支付</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 3 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=3')}">有退款</a>
+        </li>
+    </ul>
+
+    <table class="table table-bordered table-striped table-hover"
+           data-toggle="busy-table"
+           data-state="{$url.controller}{$url.action}"
+           data-show-columns="true"
+           data-show-print="true"
+           data-show-refresh="true"
+           data-show-export="true"
+           data-show-fullscreen="true"
+           data-route="true"
+           data-url="{$url.self}"
+           data-fixed-columns="true"
+           data-fixed-number="1"
+           data-fixed-right-number="1"
+           data-sticky-header="true"
+           data-row-style="busyAdmin.data.rowStyle"
+    >
+        <thead>
+            <tr>
+                <th class="text-center" width="60" data-field="<?=TradePayExtendInfo::id();?>" data-sortable="true">
+                    ID
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradePayExtendInfo::payTradeNo();?>" data-sortable="true">
+                    平台交易单号
+                </th>
+                <th class="text-center" data-align="left" data-halign="center" data-field="<?=TradePayExtendInfo::title();?>" data-sortable="false" data-formatter="@">
+                    交易描述
+                </th>
+                <th class="text-center" width="180" data-field="<?=TradePayExtendInfo::orderTradeNo();?>" data-sortable="true" data-formatter="@">
+                    平台业务单号
+                </th>
+                <th class="text-center" width="100" data-align="right" data-halign="center" data-field="<?=TradePayExtendInfo::price();?>" data-sortable="true" data-formatter="@">
+                    支付金额
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::isPay();?>" data-formatter="@">
+                    支付状态
+                </th>
+                <th class="text-center" width="100" data-align="right" data-halign="center" data-field="<?=TradePayExtendInfo::apiPrice();?>" data-sortable="true" data-formatter="@">
+                    实际支付
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::payTypeName();?>">
+                    支付方式
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradePayExtendInfo::apiTradeNo();?>">
+                    三方支付单号
+                </th>
+                <th class="text-center" width="150" data-field="<?=TradePayExtendInfo::formatPayTime();?>" data-sortable="true" data-sort-name="<?=TradePayExtendInfo::payTime()?>" data-formatter="@">
+                    支付时间
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::payRemark();?>">
+                    支付说明
+                </th>
+                <th class="text-center" width="150" data-field="<?=TradePayExtendInfo::formatCreateTime();?>" data-sortable="true" data-sort-name="<?=TradePayExtendInfo::createTime()?>" data-formatter="@">
+                    创建时间
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::username();?>" data-formatter="@">
+                    所属用户
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::orderStatusRemark();?>" data-formatter="@">
+                    业务订单备注
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::refundStatus();?>" data-formatter="@">
+                    退款状态
+                </th>
+                <th class="text-center" width="100" data-field="operate" data-formatter="@">
+                    操作
+                </th>
+            </tr>
+        </thead>
+    </table>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::title();?>">
+        <div class="min-width-240">{{value}}</div>
+    </script>
+    <script type="text/html" id="<?=TradePayExtendInfo::orderTradeNo();?>">
+        <div class="min-width-180">{{value}}</div>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::isPay();?>">
+        {{if value}}
+        <span class="badge badge-success">已支付</span>
+        {{else}}
+        <span class="badge badge-default">待支付</span>
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::price();?>">
+        <b class="text-red">￥{{value}}</b>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::apiPrice();?>">
+        <b class="text-success">￥{{value}}</b>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::formatCreateTime();?>">
+        <span class="text-muted">{{value || '-'}}</span>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::formatPayTime();?>">
+        <span class="text-success">{{value || '-'}}</span>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::refundStatus();?>">
+        {{if item.is_pay}}
+            {{if value == <?=TradePay::REFUND_STATUS_WHOLE?>}}
+                <a class="btn btn-outline-success btn-xs" href="">已全额退款</a>
+            {{else if value == <?=TradePay::REFUND_STATUS_PART?>}}
+                <a class="btn btn-outline-primary btn-xs" href="">已退款: ￥{{item.refund_amount_total}}</a>
+            {{else}}
+                <span class="text-gray">无退款</span>
+            {{/if}}
+        {{else}}
+        -
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::username();?>">
+        <a href="{:url('?field=user_id&word=')}{{item.user_id}}" data-toggle="tooltip" title="用户ID: {{item.user_id}}">{{value || ('用户ID: ' + item.user_id)}}</a>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::orderStatusRemark();?>">
+        {{if item.is_pay}}
+            {{if item.order_fail}}
+                <span class="text-danger">{{value}}</span>
+            {{else}}
+                -
+            {{/if}}
+        {{else}}
+        <span class="text-gray">-</span>
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="operate">
+        {{if item.can_order_success}}
+        <a class="btn btn-warning btn-xs"
+           data-toggle="busy-request"
+           data-url="{:url('pay_order_success?id=')}{{item.id}}"
+           data-confirm="确认要恢复该业务吗？<div class=text-danger>该操作会强制将对应的业务订单设为已支付，请谨慎使用。</div>"
+           data-on-success="@table.reload"
+        ><i class="fa fa-repeat"></i> 恢复</a>
+        {{/if}}
+
+        {{if item.can_refund}}
+        <a class="btn btn-danger btn-xs"
+           data-toggle="busy-modal"
+           data-url="{:url('pay_apply_refund?id=')}{{item.id}}"
+           data-confirm="确认要恢复该业务吗？<div class=text-danger>该操作会强制将对应的业务订单设为已支付，请谨慎使用。</div>"
+           data-form-on-success="@table.reload"
+        ><i class="bicon bicon-refund"></i> 退款</a>
+        {{/if}}
+
+        {{if item.can_pay_success}}
+        <a class="btn btn-primary btn-xs"
+           data-toggle="busy-modal"
+           data-url="{:url('pay_success?id=')}{{item.id}}"
+           data-form-on-success="@table.reload"
+        ><i class="bicon bicon-pay"></i> 支付</a>
+        {{/if}}
+
+        {{if !item.can_order_success && !item.can_refund && !item.can_pay_success}}
+            -
+        {{/if}}
+    </script>
+</block>
+<block name="foot">
+    <script>
+        busyAdmin.data.rowStyle = function (row, index) {
+            if (row.order_fail) {
+                return {classes : 'warning'};
+            }
+
+            return {};
+        }
+    </script>
+</block>

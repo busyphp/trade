@@ -1,0 +1,29 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <div class="table-responsive no-margin-bottom">
+        <table class="table table-striped table-hover table-bordered">
+            <thead>
+                <tr>
+                    <th class="text-center" width="100">参数名</th>
+                    <th class="text-center" width="100">参数值</th>
+                    <th class="text-center">参数说明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <foreach name="list" item="vo">
+                    <tr>
+                        <td class="text-center">
+                            <notempty name="vo.name">
+                                <span data-toggle="tooltip" title="{$vo.name}">{$vo.key}</span>
+                                <else />
+                                <span>{$vo.key}</span>
+                            </notempty>
+                        </td>
+                        <td class="text-center">{$vo.value}</td>
+                        <td class="text-left">{$vo.desc}</td>
+                    </tr>
+                </foreach>
+            </tbody>
+        </table>
+    </div>
+</block>

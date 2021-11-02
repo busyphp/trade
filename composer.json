@@ -12,7 +12,7 @@
 	"license"     : "CC-BY-NC-4.0",
 	"require"     : {
 		"php"             : ">=7.1.0",
-		"busyphp/busyphp" : "^6.0",
+		"busyphp/busyphp" : "dev-busyphp6",
 		"ext-json"        : "*"
 	},
 	"require-dev" : {
@@ -20,7 +20,10 @@
 	},
 	"autoload"    : {
 		"psr-4" : {
-			"BusyPHP\\trade\\" : "src"
+			"core\\"                        : "core",
+			"app\\"                         : "app",
+			"BusyPHP\\trade\\"              : "src",
+			"BusyPHP\\app\\admin\\assets\\" : "vendor/busyphp/busyphp/src/app/admin/static"
 		}
 	},
 	"extra"       : {

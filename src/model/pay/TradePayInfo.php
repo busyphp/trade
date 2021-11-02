@@ -24,9 +24,11 @@ use BusyPHP\model\Entity;
  * @method static Entity ticketIsSuccess() 是否开票成功
  * @method static Entity ticketIsFail() 是否开票失败
  * @method static Entity canApplyTicket() 是否可以申请开票
- * @method static Entity canRefund() 是否可以退款
  * @method static Entity refundStatus() 退款状态
  * @method static Entity refundAmountTotal() 已退款金额
+ * @method static Entity canOrderSuccess() 是否可以恢复业务订单
+ * @method static Entity canRefund() 是否可以退款
+ * @method static Entity canPaySuccess() 是否可以设为支付成功
  */
 class TradePayInfo extends TradePayField
 {
@@ -109,12 +111,6 @@ class TradePayInfo extends TradePayField
     public $canApplyTicket;
     
     /**
-     * 是否可以退款
-     * @var bool
-     */
-    public $canRefund;
-    
-    /**
      * 退款状态
      * @var bool
      */
@@ -125,6 +121,24 @@ class TradePayInfo extends TradePayField
      * @var float
      */
     public $refundAmountTotal;
+    
+    /**
+     * 是否可以恢复业务订单
+     * @var bool
+     */
+    public $canOrderSuccess;
+    
+    /**
+     * 是否可以退款
+     * @var bool
+     */
+    public $canRefund;
+    
+    /**
+     * 是否可以设为支付成功
+     * @var bool
+     */
+    public $canPaySuccess;
     
     /**
      * @var array
@@ -187,7 +201,6 @@ class TradePayInfo extends TradePayField
         
         // 已退款金额
         $this->refundAmountTotal = $this->apiPrice - $this->refundAmount;
-        $this->canRefund         = $this->refundAmount > 0;
         $this->refundStatus      = TradePay::REFUND_STATUS_NONE;
         
         // 已全额退款
@@ -200,5 +213,9 @@ class TradePayInfo extends TradePayField
         elseif ($this->refundAmount > 0 && $this->refundAmount < $this->apiPrice) {
             $this->refundStatus = TradePay::REFUND_STATUS_PART;
         }
+        
+        $this->canRefund       = $this->isPay && $this->refundAmount > 0;
+        $this->canOrderSuccess = $this->isPay && $this->orderFail;
+        $this->canPaySuccess   = !$this->isPay;
     }
 }

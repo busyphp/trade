@@ -1,0 +1,209 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <?php
+
+    use BusyPHP\trade\model\refund\TradeRefundExtendInfo;
+    
+    ?>
+    <div id="searchBar"
+         class="fieldset"
+         data-toggle="busy-search-bar"
+         data-url="{$url.self}"
+         data-accurate-show="true"
+         data-fields="<?=TradeRefundExtendInfo::refundNo()?>:平台退款单号,<?=TradeRefundExtendInfo::payTradeNo()?>:平台交易单号,<?=TradeRefundExtendInfo::orderTradeNo()?>:平台业务单号,<?=TradeRefundExtendInfo::apiRefundNo()?>:三方退款单号,<?=TradeRefundExtendInfo::payApiTradeNo()?>:三方支付单号,<?=TradeRefundExtendInfo::id()?>:订单ID,<?=TradeRefundExtendInfo::userId()?>:用户ID,{$query_fields}">
+        <script type="text/html" data-search-id="left">
+            <div class="form-group">
+                <div class="input-group">
+                    <div class="input-group-addon">时间范围</div>
+                    <input type="text" name="time" class="form-control date-ymdhis-range" value="{$time}" placeholder="不限时间范围" data-toggle="busy-date-picker" data-format="YYYY-MM-DD HH:mm:ss" data-range="true" readonly/>
+                    <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <div class="input-group-addon">支付方式</div>
+                    <select class="form-control" name="pay_type">
+                        <option value="0">不限</option>
+                        {$type_options}
+                        {$other_type_options}
+                    </select>
+                </div>
+            </div>
+        </script>
+    </div>
+
+    <ul class="nav nav-tabs nav-tabs-top nav-tabs-table-header">
+        <li<?=($_GET['static']['status'] ?? 0) == 0 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=0')}">全部记录</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 1 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=1')}">退款成功</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 2 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=2')}">退款失败</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 3 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=3')}">退款中</a>
+        </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 4 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=4')}">等待受理</a>
+        </li>
+    </ul>
+    <table class="table table-bordered table-striped table-hover"
+           data-toggle="busy-table"
+           data-state="{$url.controller}{$url.action}"
+           data-show-columns="true"
+           data-show-print="true"
+           data-show-refresh="true"
+           data-show-export="true"
+           data-show-fullscreen="true"
+           data-route="true"
+           data-url="{$url.self}"
+           data-fixed-columns="true"
+           data-fixed-number="1"
+           data-fixed-right-number="1"
+           data-sticky-header="true"
+           data-row-style="busyAdmin.data.rowStyle"
+    >
+        <thead>
+            <tr>
+                <th class="text-center" width="60" data-field="<?=TradeRefundExtendInfo::id();?>" data-sortable="true">
+                    ID
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradeRefundExtendInfo::refundNo();?>" data-sortable="true">
+                    平台退款单号
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradeRefundExtendInfo::payTradeNo();?>" data-sortable="true">
+                    平台交易单号
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradeRefundExtendInfo::orderTradeNo();?>" data-sortable="true">
+                    平台业务单号
+                </th>
+                <th class="text-center" data-halign="center" data-align="left" data-field="<?=TradeRefundExtendInfo::remark();?>" data-formatter="@">
+                    退款说明
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradeRefundExtendInfo::payTypeName();?>">
+                    支付方式
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradeRefundExtendInfo::payPrice();?>" data-sortable="true" data-formatter="@">
+                    支付金额
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradeRefundExtendInfo::refundPrice();?>" data-sortable="true" data-formatter="@">
+                    退款金额
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradeRefundExtendInfo::statusName();?>" data-formatter="@">
+                    退款状态
+                </th>
+                <th class="text-center" width="150" data-field="<?=TradeRefundExtendInfo::formatCompleteTime();?>" data-sort-name="<?=TradeRefundExtendInfo::completeTime();?>" data-sortable="true" data-formatter="@">
+                    完成时间
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradeRefundExtendInfo::apiRefundNo();?>" data-sortable="true">
+                    三方退款单号
+                </th>
+                <th class="text-center" width="200" data-field="<?=TradeRefundExtendInfo::payApiTradeNo();?>" data-sortable="true">
+                    三方支付单号
+                </th>
+                <th class="text-center" width="150" data-field="<?=TradeRefundExtendInfo::formatCreateTime();?>" data-sort-name="<?=TradeRefundExtendInfo::createTime();?>" data-sortable="true" data-formatter="@">
+                    创建时间
+                </th>
+                <th class="text-center" width="100" data-field="<?=TradeRefundExtendInfo::username();?>" data-sort-name="<?=TradeRefundExtendInfo::userId();?>" data-sortable="true" data-formatter="@">
+                    所属用户
+                </th>
+                <th class="text-center" width="80" data-field="operate" data-formatter="@">
+                    操作
+                </th>
+            </tr>
+        </thead>
+    </table>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::remark()?>">
+        <div class="min-width-200">{{value}}</div>
+    </script>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::payPrice()?>">
+        <div class="text-success text-bold text-right">￥{{value}}</div>
+    </script>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::refundPrice()?>">
+        <div class="text-danger text-bold text-right">￥{{value}}</div>
+    </script>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::formatCompleteTime()?>">
+        {{if item.is_success}}
+        <div class="text-success">{{value}}</div>
+        {{else if item.is_fail}}
+        <div class="text-danger">{{value}}</div>
+        {{else}}
+        -
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::formatCreateTime()?>">
+        <div class="text-gray">{{value}}</div>
+    </script>
+    
+    <script type="text/html" id="<?=TradeRefundExtendInfo::username()?>">
+        {{if item.admin_user_operate_attr}}
+        <a{{@ item.admin_user_operate_attr}}>{{value || ('用户ID: ' + item.user_id)}}</a>
+        {{else}}
+        <a href="{:url('?field=user_id&word=')}{{item.user_id}}" data-toggle="tooltip" title="用户ID: {{item.user_id}}">{{value || ('用户ID: ' + item.user_id)}}</a>
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="<?=TradeRefundExtendInfo::statusName()?>">
+        {{if item.is_success}}
+        <span class="badge badge-success" data-toggle="tooltip" title="备注：{{item.refund_account || '无'}}">{{value}}</span>
+        {{else if item.is_fail}}
+        <span class="badge badge-danger" data-toggle="tooltip" title="失败原因：{{item.fail_remark || '无'}}">{{value}}</span>
+        {{else if item.is_pending}}
+        <span class="badge badge-primary" data-toggle="tooltip" title="等待三方执行退款">{{value}}</span>
+        {{else if item.is_refund_in_queue}}
+        <span class="badge badge-info" data-toggle="tooltip" title="等待下单到三方">{{value}}</span>
+        {{else if item.is_query_in_queue}}
+        <span class="badge badge-warning" data-toggle="tooltip" title="查询三方退款结果中">{{value}}</span>
+        {{else if item.is_wait_manual}}
+        <span class="badge badge-dark" data-toggle="tooltip" title="等待手动受理">{{value}}</span>
+        {{else}}
+        <span class="badge badge-default" data-toggle="tooltip" title="等待进入退款列队">{{value}}</span>
+        {{/if}}
+    </script>
+
+    <script type="text/html" id="operate">
+        {{if item.can_retry}}
+            <a class="btn btn-danger btn-xs"
+               data-toggle="busy-request"
+               data-confirm="确认要重试该退款吗？<div class=text-danger>重试后会重新发起退款请求，请谨慎操作</div>"
+               data-url="{:url('refund_retry?id=')}{{item.id}}"
+               data-on-success="@table.reload"><i class="fa fa-refresh"></i> 重试</a>
+        {{/if}}
+        
+        {{if item.can_success}}
+            <a class="btn btn-success btn-xs"
+               data-toggle="busy-modal"
+               data-url="{:url('refund_success?id=')}{{item.id}}"
+               data-form-on-success="@table.reload"><i class="fa fa-sign-in"></i> 成功</a>
+        {{/if}}
+        
+        {{if item.can_query}}
+            <a class="btn btn-default btn-xs"
+               data-toggle="busy-modal"
+               data-type="page"
+               data-ok="false"
+               data-cancel="关闭"
+               data-padding="0"
+               data-border-top="false"
+               data-border-bottom="false"
+               data-url="{:url('refund_query?id=')}{{item.id}}">
+                {{if item.is_success}}
+                <i class="fa fa-file-text-o"></i> 结果
+                {{else}}
+                <i class="fa fa-search"></i> 查询
+                {{/if}}
+            </a>
+        {{/if}}
+        
+        {{if !item.can_query && !item.can_retry && !item.can_success}}
+        -
+        {{/if}}
+    </script>
+</block>

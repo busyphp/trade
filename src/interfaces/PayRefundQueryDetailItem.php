@@ -17,30 +17,25 @@ class PayRefundQueryDetailItem extends ObjectOption
      * 参数名称
      * @var string
      */
-    private $name = '';
+    public $name = '';
     
     /**
      * 参数键名
      * @var string
      */
-    private $key;
+    public $key;
     
     /**
      * 参数值
      * @var string
      */
-    private $value;
+    public $value;
     
     /**
      * 描述
      * @var string
      */
-    private $desc = '';
-    
-    /**
-     * @var PayRefundQueryDetailItem[]
-     */
-    private $child = [];
+    public $desc = '';
     
     
     /**
@@ -142,29 +137,6 @@ class PayRefundQueryDetailItem extends ObjectOption
     public function setDesc(string $desc) : self
     {
         $this->desc = trim($desc);
-        
-        return $this;
-    }
-    
-    
-    /**
-     * 获取参数子节点
-     * @return PayRefundQueryDetailItem[]
-     */
-    public function getChild() : array
-    {
-        return $this->child;
-    }
-    
-    
-    /**
-     * 设置参数子节点
-     * @param PayRefundQueryDetailItem[] $child
-     * @return $this
-     */
-    public function setChild(array $child) : self
-    {
-        $this->child = $child;
         
         return $this;
     }

@@ -24,6 +24,9 @@ use BusyPHP\trade\model\pay\TradePay;
  * @method static Entity statusName() 状态名称
  * @method static Entity payTypeName() 支付方式名称
  * @method static Entity payName() 支付方式别名
+ * @method static Entity canSuccess() 是否可以手动操作为成功
+ * @method static Entity canQuery() 是否可以手动查询
+ * @method static Entity canRetry() 是否可以重试退款
  */
 class TradeRefundInfo extends TradeRefundField
 {
@@ -70,6 +73,12 @@ class TradeRefundInfo extends TradeRefundField
     public $isWait;
     
     /**
+     * 是否等待手动处理
+     * @var bool
+     */
+    public $isWaitManual;
+    
+    /**
      * 是否进入退款列队
      * @var bool
      */
@@ -100,6 +109,24 @@ class TradeRefundInfo extends TradeRefundField
     public $payName;
     
     /**
+     * 设置可以手动设为成功
+     * @var bool
+     */
+    public $canSuccess;
+    
+    /**
+     * 是否可以手动查询
+     * @var bool
+     */
+    public $canQuery;
+    
+    /**
+     * 是否可以重试退款
+     * @var bool
+     */
+    public $canRetry;
+    
+    /**
      * @var array
      */
     protected static $_status;
@@ -109,6 +136,11 @@ class TradeRefundInfo extends TradeRefundField
      */
     protected static $_payTypes;
     
+    /**
+     * @var array
+     */
+    protected static $_otherPayTypes;
+    
     
     public function onParseAfter()
     {
@@ -117,6 +149,9 @@ class TradeRefundInfo extends TradeRefundField
         }
         if (!isset(static::$_payTypes)) {
             static::$_payTypes = TradePay::init()->getPayTypes();
+        }
+        if (!isset(static::$_otherPayTypes)) {
+            static::$_otherPayTypes = TradePay::getOtherPayTypes();
         }
         
         $this->formatCreateTime   = $this->createTime > 0 ? TransHelper::date($this->createTime) : '';
@@ -131,11 +166,21 @@ class TradeRefundInfo extends TradeRefundField
         $this->isWait          = $this->status == TradeRefund::REFUND_STATUS_WAIT;
         $this->isQueryInQueue  = $this->status == TradeRefund::REFUND_STATUS_IN_QUERY_QUEUE;
         $this->isRefundInQueue = $this->status == TradeRefund::REFUND_STATUS_IN_REFUND_QUEUE;
+        $this->isWaitManual    = $this->status == TradeRefund::REFUND_STATUS_WAIT_MANUAL;
         $this->statusName      = static::$_status[$this->status] ?? '';
         
+        $this->canRetry   = $this->isFail;
+        $this->canSuccess = $this->isFail || $this->isWaitManual;
+        $this->canQuery   = ($this->isPending || $this->isQueryInQueue || $this->isSuccess) && !TradePay::checkPayTypeIsManual($this->payType);
+        
         // 支付类型
-        $types             = static::$_payTypes[$this->payType] ?? [];
-        $this->payTypeName = $types['name'] ?? '';
-        $this->payName     = $types['alias'] ?? '';
+        if ($types = static::$_payTypes[$this->payType] ?? []) {
+            $this->payTypeName = $types['name'] ?? '';
+            $this->payName     = $types['alias'] ?? '';
+        } else {
+            $name              = static::$_otherPayTypes[$this->payType] ?? [];
+            $this->payTypeName = $name;
+            $this->payName     = '其它';
+        }
     }
 }

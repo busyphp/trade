@@ -180,8 +180,7 @@ class TradePay extends Model
      */
     public function getPayInfoByOrderTradeNo($orderTradeNo) : TradePayInfo
     {
-        return $this->whereEntity(TradePayField::payTime('>', 0), TradePayField::orderStatus(self::ORDER_STATUS_SUCCESS))
-            ->getInfoByOrderTradeNo($orderTradeNo);
+        return $this->whereEntity(TradePayField::payTime('>', 0))->getInfoByOrderTradeNo($orderTradeNo);
     }
     
     
@@ -667,6 +666,17 @@ class TradePay extends Model
         return self::parseVars(self::parseConst(self::class, 'OTHER_PAY_', [], function($item) {
             return $item['name'];
         }), $val);
+    }
+    
+    
+    /**
+     * 检测支付类型是否手动处理的类型
+     * @param int $payType
+     * @return bool
+     */
+    public static function checkPayTypeIsManual(int $payType) : bool
+    {
+        return in_array($payType, array_keys(self::getOtherPayTypes()));
     }
     
     

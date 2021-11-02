@@ -1,0 +1,27 @@
+<extend name="@admin:layout" />
+<block name="content">
+    <input type="hidden" name="id" value="{$info.id}"/>
+    <div class="alert alert-warning alert-sm">
+        <i class="fa fa-warning"></i> 警告：<br />
+        1. 请在业务订单管理中执行退款<br />
+        2. 可能会影响对应的业务订单的退款逻辑
+    </div>
+    <div class="form-group">
+        <label>剩余可退</label>
+        <div class="input-group">
+            <input type="text" class="form-control" readonly value="{$info.refund_amount}"/>
+            <div class="input-group-addon">元</div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="required">退款金额</label>
+        <div class="input-group">
+            <input type="number" step="0.01" min="0.01" max="{$info.refund_amount}" class="form-control" value="{$info.refund_amount}" name="price" placeholder="请输入退款金额" required/>
+            <div class="input-group-addon">元</div>
+        </div>
+    </div>
+    <div class="form-group no-margin-bottom">
+        <label class="required">退款说明</label>
+        <textarea class="form-control" name="remark" placeholder="请输入退款说明" required></textarea>
+    </div>
+</block>
