@@ -1,7 +1,8 @@
 {
 	"name"        : "busyphp/trade",
 	"type"        : "library",
-	"description" : "用于支付、退款、转账等操作",
+	"description" : "用于BusyPHP支付、退款、转账等操作，使用三方支付必须安装的基本模块",
+	"homepage"    : "http://www.harter.cn/?form=BusyPHP&plugin=busyphp/trade",
 	"authors"     : [
 		{
 			"name"  : "busy^life",
@@ -24,6 +25,22 @@
 	},
 	"extra"       : {
 		"busyphp" : {
+			"manager"  : {
+				"name"    : "交易中心模块",
+				"class"   : "BusyPHP\\trade\\app\\controller\\ManagerController",
+				"install" : {
+					"install_operate"   : {
+						"type"      : "modal",
+						"success"   : "@table.reload|@app.loadInfo",
+						"modalSize" : "lg"
+					},
+					"uninstall_operate" : {
+						"type"    : "modal",
+						"success" : "@table.reload|@app.loadInfo"
+					}
+				},
+				"setting" : true
+			},
 			"services" : [
 				"BusyPHP\\trade\\Service"
 			],
