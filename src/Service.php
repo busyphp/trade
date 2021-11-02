@@ -3,7 +3,6 @@
 namespace BusyPHP\trade;
 
 use BusyPHP\Service as BaseService;
-use BusyPHP\trade\app\controller\InstallController;
 use BusyPHP\trade\app\controller\NotifyController;
 use BusyPHP\trade\app\controller\TradeController;
 use BusyPHP\trade\model\TradeConfig;
@@ -26,8 +25,6 @@ class Service extends \think\Service
     {
         $this->registerRoutes(function(Route $route) {
             $actionPattern = '<' . BaseService::ROUTE_VAR_ACTION . '>';
-            
-            $route->rule('general/plugin/install/trade', InstallController::class . '@index');
             
             // 注册异步通知路由
             $route->rule(self::URL_NOTIFY_PATH . "{$actionPattern}", NotifyController::class . "@{$actionPattern}")
