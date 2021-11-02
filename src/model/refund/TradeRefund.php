@@ -5,7 +5,6 @@ namespace BusyPHP\trade\model\refund;
 
 use BusyPHP\App;
 use BusyPHP\app\admin\model\system\lock\SystemLock;
-use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
 use BusyPHP\exception\ClassNotFoundException;
 use BusyPHP\exception\ClassNotImplementsException;
 use BusyPHP\exception\ParamInvalidException;
