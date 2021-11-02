@@ -1,0 +1,48 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label required">菜单安装位置</label>
+            <div class="col-sm-8">
+                <select class="form-control" name="parent_path" required>
+                    <option value="">请选择菜单位置</option>
+                    {$menu_options}
+                </select>
+                <div class="help-block no-margin-bottom">
+                    选择菜单安装位置，系统会自动为该菜单创建2个子菜单：<br/>
+                    <code>交易管理:plugins_trade/pay</code><br/>
+                    <code>退款管理:plugins_trade/refund</code><br/>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">是否覆盖菜单</label>
+            <div class="col-sm-8">
+                <div class="radio no-margin-bottom">
+                    <input type="radio" data-toggle="busy-radio" name="replace_menu" value="0" title="不覆盖" checked/>
+                    <input type="radio" data-toggle="busy-radio" name="replace_menu" value="1" title="覆盖"/>
+                </div>
+                <div class="help-block no-margin-bottom">
+                    设置<code>覆盖</code>后，如果存在以下菜单，则会将其删除 <br />
+                    <code>交易管理:plugins_trade/pay</code><br />
+                    <code>退款管理:plugins_trade/refund</code><br />
+                </div>
+            </div>
+        </div>
+        <div class="form-group no-margin-bottom">
+            <label class="col-sm-3 control-label">是否覆盖数据表</label>
+            <div class="col-sm-8">
+                <div class="radio no-margin-bottom">
+                    <input type="radio" data-toggle="busy-radio" name="replace_table" value="0" title="不覆盖" checked/>
+                    <input type="radio" data-toggle="busy-radio" name="replace_table" value="1" title="覆盖"/>
+                </div>
+                <div class="help-block no-margin-bottom">
+                    设置<code>覆盖</code>后，如果存在以下表，则会将其删除<br />
+                    <code>*_trade_pay</code><br />
+                    <code>*_trade_refund</code><br />
+                    <code>*_trade_no</code><br />
+                </div>
+            </div>
+        </div>
+    </div>
+</block>

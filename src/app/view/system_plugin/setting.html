@@ -1,0 +1,59 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <fieldset class="fieldset">
+        <legend>执行三方退款</legend>
+
+        <div class="form-group">
+            <label>定时任务间隔秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[submit_interval]" value="{$info.submit_interval|default='1'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block">设置定时执行任务间隔秒数，注意调整该项可能需要重启相关命令行</div>
+        </div>
+        <div class="form-group">
+            <label>超时下单秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[submit_timeout]" value="{$info.submit_timeout|default='0'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block">设置退款执行三方下单后，多少时间内没有响应则判定为超时并回收，设为0则不回收</div>
+        </div>
+        <div class="form-group no-margin-bottom">
+            <label>超时回收单延迟执行秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[submit_delay]" value="{$info.submit_delay|default='3600'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block no-margin-bottom">设置被判定执行三方下单超时并回收的订单，延迟多少秒继续重试下单</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="fieldset no-margin-bottom">
+        <legend>退款状态查询</legend>
+        <div class="form-group">
+            <label>定时任务间隔秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[query_interval]" value="{$info.query_interval|default='1'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block">设置定时执行任务间隔秒数，注意调整该项可能需要重启相关命令行</div>
+        </div>
+        <div class="form-group">
+            <label>超时查询秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[query_timeout]" value="{$info.query_timeout|default='0'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block">设置退款执行状态查询后，多少时间内没有响应则判定为超时并回收，设为0则不回收</div>
+        </div>
+        <div class="form-group no-margin-bottom">
+            <label>超时回收单延迟执行秒数</label>
+            <div class="input-group">
+                <input type="number" class="form-control" name="data[query_delay]" value="{$info.query_delay|default='3600'}" placeholder="请输入秒"/>
+                <div class="input-group-addon">秒</div>
+            </div>
+            <div class="help-block no-margin-bottom">设置被判定执行状态查询超时并回收的订单，延迟多少秒继续重试查询</div>
+        </div>
+    </fieldset>
+</block>

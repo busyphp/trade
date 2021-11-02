@@ -1,0 +1,36 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <div class="alert alert-warning no-margin-bottom"><i class="fa fa-warning"></i> 请注意对应的数据是否已备份，卸载后，数据将彻底删除且不可恢复。</div>
+    <div class="space-10"></div>
+    <div class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label">是否保留菜单</label>
+            <div class="col-sm-8">
+                <div class="radio no-margin-bottom">
+                    <input type="radio" data-toggle="busy-radio" name="retain_menu" value="0" title="不保留" checked/>
+                    <input type="radio" data-toggle="busy-radio" name="retain_menu" value="1" title="保留"/>
+                </div>
+                <div class="help-block no-margin-bottom">
+                    设置<code>不保留</code>后，将删除以下菜单：<br />
+                    <code>交易管理:plugins_trade/pay</code><br />
+                    <code>退款管理:plugins_trade/refund</code><br />
+                </div>
+            </div>
+        </div>
+        <div class="form-group no-margin-bottom">
+            <label class="col-sm-3 control-label">是否保留数据表</label>
+            <div class="col-sm-8">
+                <div class="radio no-margin-bottom">
+                    <input type="radio" data-toggle="busy-radio" name="retain_table" value="0" title="不保留"/>
+                    <input type="radio" data-toggle="busy-radio" name="retain_table" value="1" title="保留" checked/>
+                </div>
+                <div class="help-block no-margin-bottom">
+                    设置<code>不保留</code>后，将删除以下表：<br />
+                    <code>*_trade_pay</code><br />
+                    <code>*_trade_refund</code><br />
+                    <code>*_trade_no</code><br />
+                </div>
+            </div>
+        </div>
+    </div>
+</block>
