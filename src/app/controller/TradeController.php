@@ -22,7 +22,6 @@ use BusyPHP\trade\model\pay\TradePayField;
 use BusyPHP\trade\model\refund\TradeRefund;
 use BusyPHP\trade\model\refund\TradeRefundExtendInfo;
 use BusyPHP\trade\model\refund\TradeRefundField;
-use BusyPHP\trade\model\TradeConfig;
 use Exception;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
@@ -36,8 +35,6 @@ use think\Response;
  */
 class TradeController extends AdminController
 {
-    use TradeConfig;
-    
     /**
      * 支付管理
      * @return Response

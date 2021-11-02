@@ -5,8 +5,6 @@ namespace BusyPHP\trade\model;
 use BusyPHP\App;
 use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
 use Exception;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
 
 /**
  * 配置
