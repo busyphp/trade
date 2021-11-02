@@ -3,6 +3,10 @@
 namespace BusyPHP\trade\model;
 
 use BusyPHP\App;
+use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
+use Exception;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
 
 /**
  * 配置
@@ -31,5 +35,21 @@ trait TradeConfig
         }
         
         return $app->config->get('trade.' . $name, $default);
+    }
+    
+    
+    /**
+     * 获取设置
+     * @param string $key
+     * @param mixed  $default
+     * @return mixed
+     */
+    public function getSetting(string $key, $default = null)
+    {
+        try {
+            return SystemPlugin::init()->getSetting('busyphp/trade', $key, $default);
+        } catch (Exception $e) {
+            return $default;
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace BusyPHP\trade\model\refund;
 
 use BusyPHP\App;
 use BusyPHP\app\admin\model\system\lock\SystemLock;
+use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
 use BusyPHP\exception\ClassNotFoundException;
 use BusyPHP\exception\ClassNotImplementsException;
 use BusyPHP\exception\ParamInvalidException;
@@ -633,12 +634,12 @@ class TradeRefund extends Model
     
     /**
      * 退款任务
-     * @param int $delaySec 设置对于重新入队的数据延迟执行的秒数
-     * @param int $recoverySec 设置回收超过一定秒数内没有下单成功的数据，设为0则关闭回收
      */
-    public function taskRefund(int $delaySec = 3600, int $recoverySec = 3600)
+    public function taskRefund()
     {
-        $infoId = null;
+        $delaySec    = (int) $this->getSetting('submit_delay', 0);
+        $recoverySec = (int) $this->getSetting('submit_timeout', 0);
+        $infoId      = null;
         try {
             $infoId = SystemLock::init()->do('trade_task_refund', function() use ($delaySec) {
                 $delayTime = time() - $delaySec;
@@ -712,12 +713,12 @@ class TradeRefund extends Model
     
     /**
      * 查询任务
-     * @param int $delaySec 设置对于重新入队的数据延迟执行的秒数
-     * @param int $recoverySec 设置回收超过一定秒数内没有查询成功的数据，设为0则关闭回收
      */
-    public function taskQuery(int $delaySec = 3600, int $recoverySec = 3600)
+    public function taskQuery()
     {
-        $infoId = null;
+        $delaySec    = (int) $this->getSetting('query_delay', 0);
+        $recoverySec = (int) $this->getSetting('query_timeout', 0);
+        $infoId      = null;
         try {
             $infoId = SystemLock::init()->do('trade_task_query', function() use ($delaySec) {
                 $delayTime = time() - $delaySec;
