@@ -148,20 +148,20 @@ class ManagerController extends PluginManager
                     $menuModel->deleteByPath($refundPath, true);
                 }
                 
-                // 不存在交易管理则创建
-                if (!$menuModel->whereEntity(SystemMenuField::path($payPath))->count()) {
-                    $menuModel->addMenu($payPath, '交易管理', $parentPath, 'bicon bicon-pay');
-                    $menuModel->addMenu('plugins_trade/pay_apply_refund', '创建退款单', $payPath, '', true);
-                    $menuModel->addMenu('plugins_trade/pay_success', '支付订单', $payPath, '', true);
-                    $menuModel->addMenu('plugins_trade/pay_order_success', '恢复业务订单', $payPath, '', true);
-                }
-                
                 // 不存在退款管理则创建
                 if (!$menuModel->whereEntity(SystemMenuField::path($refundPath))->count()) {
-                    $menuModel->addMenu($refundPath, '退款管理', $parentPath, 'bicon bicon-refund');
-                    $menuModel->addMenu('plugins_trade/refund_query', '查询退款结果', $refundPath, '', true);
-                    $menuModel->addMenu('plugins_trade/refund_success', '设为退款成功', $refundPath, '', true);
-                    $menuModel->addMenu('plugins_trade/refund_retry', '重试退款', $refundPath, '', true);
+                    $menuModel->addMenu($refundPath, '退款管理', $parentPath, 'bicon bicon-refund', false, 2);
+                    $menuModel->addMenu('plugins_trade/refund_retry', '重试退款', $refundPath, '', true, 1);
+                    $menuModel->addMenu('plugins_trade/refund_success', '设为退款成功', $refundPath, '', true, 2);
+                    $menuModel->addMenu('plugins_trade/refund_query', '查询退款结果', $refundPath, '', true, 3);
+                }
+                
+                // 不存在交易管理则创建
+                if (!$menuModel->whereEntity(SystemMenuField::path($payPath))->count()) {
+                    $menuModel->addMenu($payPath, '交易管理', $parentPath, 'bicon bicon-pay', false, 1);
+                    $menuModel->addMenu('plugins_trade/pay_success', '支付订单', $payPath, '', true, 1);
+                    $menuModel->addMenu('plugins_trade/pay_order_success', '恢复业务订单', $payPath, '', true, 2);
+                    $menuModel->addMenu('plugins_trade/pay_apply_refund', '创建退款单', $payPath, '', true, 3);
                 }
                 
                 // 删除表
