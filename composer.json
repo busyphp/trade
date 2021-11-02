@@ -12,7 +12,7 @@
 	"license"     : "CC-BY-NC-4.0",
 	"require"     : {
 		"php"             : ">=7.1.0",
-		"busyphp/busyphp" : "dev-busyphp6",
+		"busyphp/busyphp" : "^6.0",
 		"ext-json"        : "*"
 	},
 	"require-dev" : {
