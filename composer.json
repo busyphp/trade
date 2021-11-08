@@ -3,6 +3,10 @@
 	"type"        : "library",
 	"description" : "用于BusyPHP支付、退款、转账等操作，使用三方支付必须安装的基本模块",
 	"homepage"    : "http://www.harter.cn/?form=BusyPHP&plugin=busyphp/trade",
+	"keywords"    : [
+		"交易中心",
+		"支付中心"
+	],
 	"authors"     : [
 		{
 			"name"  : "busy^life",
@@ -12,18 +16,16 @@
 	"license"     : "CC-BY-NC-4.0",
 	"require"     : {
 		"php"             : ">=7.1.0",
+		"ext-json"        : "*",
 		"busyphp/busyphp" : "^6.0",
-		"ext-json"        : "*"
+		"busyphp/swoole"  : "^2.0"
 	},
 	"require-dev" : {
 		"symfony/var-dumper" : "^4.2"
 	},
 	"autoload"    : {
 		"psr-4" : {
-			"core\\"                        : "core",
-			"app\\"                         : "app",
-			"BusyPHP\\trade\\"              : "src",
-			"BusyPHP\\app\\admin\\assets\\" : "vendor/busyphp/busyphp/src/app/admin/static"
+			"BusyPHP\\trade\\" : "src"
 		}
 	},
 	"extra"       : {
