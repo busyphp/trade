@@ -87,19 +87,17 @@ class PayRefundQueryResult extends ObjectOption
     
     /**
      * 添加查询单项
-     * @param string                     $key 参数键名
-     * @param mixed                      $value 参数值
-     * @param string                     $name 参数名称
-     * @param string                     $desc 参数描述
-     * @param PayRefundQueryDetailItem[] $child 子节点
+     * @param string $key 参数键名
+     * @param mixed  $value 参数值
+     * @param string $name 参数名称
+     * @param string $desc 参数描述
      * @return $this
      */
-    public function addDetail(string $key, $value, string $name = '', string $desc = '', array $child = []) : self
+    public function addDetail(string $key, $value, string $name = '', string $desc = '') : self
     {
         $item = new PayRefundQueryDetailItem($key, $value);
         $item->setName($name);
         $item->setDesc($desc);
-        $item->setChild($child);
         
         return $this;
     }
