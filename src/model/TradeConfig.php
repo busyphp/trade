@@ -25,7 +25,7 @@ trait TradeConfig
      */
     public function getTradeConfig($name, $default = null)
     {
-        $app = App::init();
+        $app = App::getInstance();
         if (!$this->isLoad) {
             $app->config->load($app->getRootPath() . 'config' . DIRECTORY_SEPARATOR . 'extend' . DIRECTORY_SEPARATOR . 'trade.php', 'trade');
             

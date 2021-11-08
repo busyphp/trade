@@ -16,7 +16,7 @@ return [
     // 接收异步或同步请求的时候获取支付类型的参数键
     'var_pay_type'     => 'pay_type',
     
-    // 指定支付订单需要的的会员模型，必须集成 {@link BusyPHP\trade\interfaces\TradeMemberModel}
+    // 指定支付订单需要的的会员模型，必须实现 BusyPHP\trade\interfaces\TradeMemberModel 接口
     'trade_member'     => '',
     
     // 支付订单号前缀
@@ -24,6 +24,21 @@ return [
     
     // 退款订单号前缀
     'refund_no_prefix' => 1002,
+    
+    // 任务配置
+    'task'             => [
+        // 退款任务
+        'refund' => [
+            // 是否启用
+            'enable'          => false,
+            
+            // 下单任务间隔执行毫秒
+            'submit_interval' => 1000,
+            
+            // 查询任务间隔执行毫秒
+            'query_interval'  => 1000
+        ]
+    ],
     
     // 业务订单模型绑定
     'models'           => [

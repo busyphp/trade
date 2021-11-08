@@ -477,7 +477,7 @@ class TradeRefund extends Model
         // 获取支付类型
         if (!$payType) {
             $var     = $this->getTradeConfig('var_pay_type', 'pay_type');
-            $payType = App::init()->request->param("{$var}/d", 0);
+            $payType = App::getInstance()->request->param("{$var}/d", 0);
         }
         
         $tag      = '退款异步通知';

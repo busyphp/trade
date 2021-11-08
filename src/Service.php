@@ -6,6 +6,9 @@ use BusyPHP\Service as BaseService;
 use BusyPHP\trade\app\controller\NotifyController;
 use BusyPHP\trade\app\controller\TradeController;
 use BusyPHP\trade\model\TradeConfig;
+use BusyPHP\trade\task\RefundQueryTask;
+use BusyPHP\trade\task\RefundSubmitTask;
+use think\Container;
 use think\Route;
 
 /**
@@ -21,8 +24,34 @@ class Service extends \think\Service
     const URL_NOTIFY_PATH = 'service/plugins/trade/notify/';
     
     
+    /**
+     * 单例模式
+     * @return self
+     */
+    public static function init()
+    {
+        return Container::getInstance()->make(self::class);
+    }
+    
+    
     public function boot()
     {
+        // 注入任务
+        if ($this->getTradeConfig('task.refund.enable', false)) {
+            $swoole                    = $this->app->config->get('swoole', []);
+            $swoole['task']            = $swoole['task'] ?? [];
+            $swoole['task']['workers'] = $swoole['task']['workers'] ?? [];
+            if (!in_array(RefundSubmitTask::class, $swoole['task']['workers'])) {
+                $swoole['task']['workers'][] = RefundSubmitTask::class;
+            }
+            if (!in_array(RefundQueryTask::class, $swoole['task']['workers'])) {
+                $swoole['task']['workers'][] = RefundQueryTask::class;
+            }
+            
+            $swoole['task']['enable'] = true;
+            $this->app->config->set($swoole, 'swoole');
+        }
+        
         $this->registerRoutes(function(Route $route) {
             $actionPattern = '<' . BaseService::ROUTE_VAR_ACTION . '>';
             
