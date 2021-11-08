@@ -162,9 +162,9 @@
     <script type="text/html" id="<?=TradePayExtendInfo::refundStatus();?>">
         {{if item.is_pay}}
             {{if value == <?=TradePay::REFUND_STATUS_WHOLE?>}}
-                <a class="btn btn-outline-success btn-xs" href="">已全额退款</a>
+                <a class="btn btn-outline-success btn-xs" href="{:url('refund?static[time]=&field=pay_trade_no&accurate=1&word=')}{{item.pay_trade_no}}" target="_blank">已全额退款</a>
             {{else if value == <?=TradePay::REFUND_STATUS_PART?>}}
-                <a class="btn btn-outline-primary btn-xs" href="">已退款: ￥{{item.refund_amount_total}}</a>
+                <a class="btn btn-outline-primary btn-xs" href="{:url('refund?static[time]=&field=pay_trade_no&accurate=1&word=')}{{item.pay_trade_no}}" target="_blank">已退款: ￥{{item.refund_amount_total}}</a>
             {{else}}
                 <span class="text-gray">无退款</span>
             {{/if}}
