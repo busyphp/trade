@@ -442,8 +442,13 @@ class TradeRefund extends Model
      */
     public function inquiry($id, &$isSetStatus = false) : PayRefundQueryResult
     {
-        $query = null;
-        $info  = $this->getInfo($id);
+        $query  = null;
+        $info   = $this->getInfo($id);
+        $result = new PayRefundNotifyResult();
+        $result->setRefundNo($info->refundNo);
+        $result->setPayTradeNo($info->payTradeNo);
+        $result->setPayApiTradeNo($info->payApiTradeNo);
+        
         try {
             // 获取查询接口
             $class = $this->getTradeConfig("apis.{$info->payType}.refund_query", '');
@@ -457,15 +462,17 @@ class TradeRefund extends Model
                 throw new ClassNotImplementsException($class, PayRefundQuery::class, '退款查询类');
             }
             $api->setTradeRefundInfo($info);
-            $query  = $api->query();
-            $result = $query->getNotifyResult();
+            $query     = $api->query();
+            $notifyRes = $query->getNotifyResult();
+            
+            $result->setStatus($notifyRes->isStatus());
+            $result->setErrMsg($notifyRes->getErrMsg());
+            $result->setNeedReHandle($notifyRes->isNeedReHandle());
+            $result->setRefundAccount($notifyRes->getRefundAccount());
+            $result->setApiRefundNo($notifyRes->getApiRefundNo());
         } catch (Throwable $e) {
-            $result = new PayRefundNotifyResult();
             $result->setStatus(false);
             $result->setErrMsg($e->getMessage());
-            $result->setPayApiTradeNo($info->payApiTradeNo);
-            $result->setPayTradeNo($info->payTradeNo);
-            $result->setRefundNo($info->refundNo);
         }
         
         // 等待结果的 或者 进入查询列队的，则设置状态
