@@ -26,6 +26,7 @@ use Exception;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\Response;
+use Throwable;
 
 /**
  * 交易管理
@@ -441,7 +442,7 @@ class TradeController extends AdminController
     /**
      * 设为退款成功
      * @return Response
-     * @throws Exception
+     * @throws Throwable
      */
     public function refund_success()
     {
@@ -476,7 +477,7 @@ class TradeController extends AdminController
     /**
      * 查询退款结果
      * @return Response
-     * @throws Exception
+     * @throws Throwable
      */
     public function refund_query()
     {

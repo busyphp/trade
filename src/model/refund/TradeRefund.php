@@ -32,6 +32,7 @@ use think\exception\HttpException;
 use think\facade\Route;
 use think\Response;
 use think\route\Url;
+use Throwable;
 
 /**
  * 交易退款模型
@@ -357,7 +358,7 @@ class TradeRefund extends Model
                     $update->status    = self::REFUND_STATUS_PENDING;
                     $update->queueTime = 0;
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 // 退款失败
                 $update->status       = self::REFUND_STATUS_FAIL;
                 $update->failRemark   = $e->getMessage();
@@ -437,33 +438,47 @@ class TradeRefund extends Model
      * @return PayRefundQueryResult
      * @throws DataNotFoundException
      * @throws DbException
-     * @throws Exception
+     * @throws Throwable
      */
     public function inquiry($id, &$isSetStatus = false) : PayRefundQueryResult
     {
-        $info = $this->getInfo($id);
-        
-        // 获取查询接口
-        $class = $this->getTradeConfig("apis.{$info->payType}.refund_query", '');
-        if (!$class || !class_exists($class)) {
-            throw new ClassNotFoundException($class, "该支付方式[ {$info->payType} ]未绑定退款查询接口");
+        $query = null;
+        $info  = $this->getInfo($id);
+        try {
+            // 获取查询接口
+            $class = $this->getTradeConfig("apis.{$info->payType}.refund_query", '');
+            if (!$class || !class_exists($class)) {
+                throw new ClassNotFoundException($class, "该支付方式[ {$info->payType} ]未绑定退款查询接口");
+            }
+            
+            // 执行查询
+            $api = new $class();
+            if (!$api instanceof PayRefundQuery) {
+                throw new ClassNotImplementsException($class, PayRefundQuery::class, '退款查询类');
+            }
+            $api->setTradeRefundInfo($info);
+            $query  = $api->query();
+            $result = $query->getNotifyResult();
+        } catch (Throwable $e) {
+            $result = new PayRefundNotifyResult();
+            $result->setStatus(false);
+            $result->setErrMsg($e->getMessage());
+            $result->setPayApiTradeNo($info->payApiTradeNo);
+            $result->setPayTradeNo($info->payTradeNo);
+            $result->setRefundNo($info->refundNo);
         }
-        
-        // 执行查询
-        $api = new $class();
-        if (!$api instanceof PayRefundQuery) {
-            throw new ClassNotImplementsException($class, PayRefundQuery::class, '退款查询类');
-        }
-        $api->setTradeRefundInfo($info);
-        $result = $api->query();
         
         // 等待结果的 或者 进入查询列队的，则设置状态
         if ($info->isPending || $info->isQueryInQueue) {
-            $this->setRefundStatus($result->getNotifyResult());
+            $this->setRefundStatus($result);
             $isSetStatus = true;
         }
         
-        return $result;
+        if (!empty($e)) {
+            throw $e;
+        }
+        
+        return $query;
     }
     
     
@@ -523,7 +538,7 @@ class TradeRefund extends Model
             self::log($tag)->info('处理完成');
             
             return $notify->onSuccess($status);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
             
             return $notify->onError($e);
@@ -597,7 +612,7 @@ class TradeRefund extends Model
      * 设置退款状态
      * @param PayRefundNotifyResult $result 退款返回数据
      * @param bool                  $must 是否强制将退款失败的订单设为成功
-     * @throws Exception
+     * @throws Throwable
      */
     public function setRefundStatus(PayRefundNotifyResult $result, $must = false)
     {
@@ -700,7 +715,7 @@ class TradeRefund extends Model
                         try {
                             $modal = TradePay::init()->getOrderModel($this->refundInfo->orderTradeNo);
                             $modal->setRefundStatus($this->refundInfo, $tradePayInfo, $this->result->isStatus(), $this->result->isStatus() ? $update->refundAccount : $update->failRemark);
-                        } catch (Exception $e) {
+                        } catch (Throwable $e) {
                             TradeRefund::log('退款处理完成，但通知业务订单失败', __METHOD__)->error($e);
                         }
                         
@@ -714,7 +729,7 @@ class TradeRefund extends Model
                 });
             
             $this->commit();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback();
             
             throw $e;
@@ -872,7 +887,7 @@ class TradeRefund extends Model
             self::log($tag)->info("开始: {$infoId}");
             $this->inquiry($infoId);
             self::log($tag)->info("完成: {$infoId}");
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
         }
     }
