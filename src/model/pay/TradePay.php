@@ -113,7 +113,7 @@ class TradePay extends Model
     protected function createOrder(TradePayField $insert, $disabledTrans = false)
     {
         // 校验是否支付
-        if (!$this->checkPayByOrderTradeNo($insert->orderTradeNo)) {
+        if ($this->checkPayByOrderTradeNo($insert->orderTradeNo)) {
             throw new VerifyException('该订单已支付，请勿重复支付', 'pay_success');
         }
         
@@ -212,7 +212,7 @@ class TradePay extends Model
         $orderTradeNo = (string) $orderTradeNo;
         $model        = $this->getOrderModel($orderTradeNo);
         
-        if (!$this->checkPayByOrderTradeNo($orderTradeNo)) {
+        if ($this->checkPayByOrderTradeNo($orderTradeNo)) {
             throw new VerifyException('该订单已支付，请勿重复支付', 'pay_success');
         }
         
