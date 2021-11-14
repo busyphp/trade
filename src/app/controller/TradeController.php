@@ -234,7 +234,7 @@ class TradeController extends AdminController
             $param->setApiTradeNo($apiTradeNo);
             $param->setPayRemark($this->post('pay_remark/s', 'trim'));
             $param->setPayTradeNo($info->payTradeNo);
-            $status = TradePay::init()->setPaySuccess($param);
+            $status = TradePay::init()->setPaySuccess($param, true);
             $this->log()->record(self::LOG_UPDATE, '支付订单');
             
             return $this->success(!$status ? '该订单已支付' : '支付成功');

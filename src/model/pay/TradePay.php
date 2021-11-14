@@ -454,11 +454,18 @@ class TradePay extends Model
             }
             
             try {
-                $modal = $this->getOrderModel($info->orderTradeNo);
-                $modal->setPaySuccess($info);
-                $orderStatus       = self::ORDER_STATUS_SUCCESS;
-                $orderStatusRemark = '';
+                $model = $this->getOrderModel($info->orderTradeNo);
+                if ($model->setPaySuccess($info)) {
+                    $orderStatus       = self::ORDER_STATUS_SUCCESS;
+                    $orderStatusRemark = '';
+                } else {
+                    throw new VerifyException('重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录', 'paid');
+                }
             } catch (Exception $e) {
+                if ($e instanceof VerifyException && $e->getField() === 'paid') {
+                    throw $e;
+                }
+                
                 $orderStatus       = self::ORDER_STATUS_FAIL;
                 $orderStatusRemark = $e->getMessage();
             }
@@ -481,11 +488,12 @@ class TradePay extends Model
     /**
      * 设置订单支付成功
      * @param PayNotifyResult $result
+     * @param bool            $checkPay 是否检测业务订单已支付
      * @param bool            $disabledTrans 是否禁用内部事物，默认不禁用
      * @return bool true: 支付成功，false: 已支付过
      * @throws Exception
      */
-    public function setPaySuccess(PayNotifyResult $result, bool $disabledTrans = false) : bool
+    public function setPaySuccess(PayNotifyResult $result, bool $checkPay = false, bool $disabledTrans = false) : bool
     {
         $payTradeNo = $result->getPayTradeNo();
         
@@ -501,13 +509,24 @@ class TradePay extends Model
                 goto commit;
             }
             
+            // 检测业务订单是否支付
+            if ($checkPay) {
+                if ($this->checkPayByOrderTradeNo($info->orderTradeNo)) {
+                    throw new VerifyException('该订单关联的业务订单已支付', 'paid');
+                }
+            }
+            
             
             // 获取订单模型将订单设为支付成功
             try {
                 $modal = $this->getOrderModel($info->orderTradeNo);
-                $modal->setPaySuccess($info);
-                $orderStatus       = self::ORDER_STATUS_SUCCESS;
-                $orderStatusRemark = '';
+                if ($modal->setPaySuccess($info)) {
+                    $orderStatus       = self::ORDER_STATUS_SUCCESS;
+                    $orderStatusRemark = '';
+                } else {
+                    $orderStatus       = self::ORDER_STATUS_FAIL;
+                    $orderStatusRemark = '重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录';
+                }
             } catch (Exception $e) {
                 $orderStatus       = self::ORDER_STATUS_FAIL;
                 $orderStatusRemark = $e->getMessage();
