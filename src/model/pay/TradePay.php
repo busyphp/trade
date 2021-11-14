@@ -512,7 +512,7 @@ class TradePay extends Model
             // 检测业务订单是否支付
             if ($checkPay) {
                 if ($this->checkPayByOrderTradeNo($info->orderTradeNo)) {
-                    throw new VerifyException('该订单关联的业务订单已支付', 'paid');
+                    throw new VerifyException('重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录', 'paid');
                 }
             }
             
