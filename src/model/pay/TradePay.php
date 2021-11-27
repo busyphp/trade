@@ -15,13 +15,13 @@ use BusyPHP\trade\interfaces\PayNotify;
 use BusyPHP\trade\interfaces\PayNotifyResult;
 use BusyPHP\trade\interfaces\PayOrder;
 use BusyPHP\trade\interfaces\PayOrderPayData;
+use BusyPHP\trade\interfaces\TradeMemberAdminPayOperateAttr;
 use BusyPHP\trade\interfaces\TradeMemberModel;
 use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\TradeConfig;
 use BusyPHP\trade\Service;
 use Closure;
-use Exception;
 use LogicException;
 use RangeException;
 use RuntimeException;
@@ -32,6 +32,7 @@ use think\exception\HttpException;
 use think\facade\Route;
 use think\Response;
 use think\route\Url;
+use Throwable;
 
 /**
  * 系统支付订单模型
@@ -108,7 +109,7 @@ class TradePay extends Model
      * @param TradePayField $insert
      * @param bool          $disabledTrans
      * @return string
-     * @throws Exception
+     * @throws Throwable
      */
     protected function createOrder(TradePayField $insert, $disabledTrans = false)
     {
@@ -133,7 +134,7 @@ class TradePay extends Model
             $this->commit($disabledTrans);
             
             return $insertId;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback($disabledTrans);
             
             throw $e;
@@ -205,7 +206,7 @@ class TradePay extends Model
      * @param $orderTradeNo
      * @return PayOrderPayData
      * @throws DbException
-     * @throws Exception
+     * @throws Throwable
      */
     public function getPayData($orderTradeNo) : PayOrderPayData
     {
@@ -279,7 +280,7 @@ class TradePay extends Model
      * @return PayCreate
      * @throws DataNotFoundException
      * @throws DbException
-     * @throws Exception
+     * @throws Throwable
      */
     public function pay($userId, int $payType, string $orderTradeNo) : PayCreate
     {
@@ -342,7 +343,7 @@ class TradePay extends Model
      * 解析同步返回结果
      * @param int $payType
      * @return PayCreateSyncReturn
-     * @throws Exception
+     * @throws Throwable
      */
     public function parseReturn(int $payType) : PayCreateSyncReturn
     {
@@ -419,7 +420,7 @@ class TradePay extends Model
             if (!$notify->getPayTradeNo()) {
                 throw new RuntimeException("无法获取支付订单号，请确认异步处理程序中已配置 setPayTradeNo()");
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
             throw new HttpException(503, $e->getMessage());
         }
@@ -431,7 +432,7 @@ class TradePay extends Model
             self::log($tag)->info($result ? '支付成功' : '重复通知，该订单已支付');
             
             return $notify->onSuccess($result);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
             
             return $notify->onError($e);
@@ -442,7 +443,7 @@ class TradePay extends Model
     /**
      * 设置业务订单为支付成功
      * @param $id
-     * @throws Exception
+     * @throws Throwable
      */
     public function setOrderSuccess($id)
     {
@@ -461,7 +462,7 @@ class TradePay extends Model
                 } else {
                     throw new VerifyException('重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录', 'paid');
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 if ($e instanceof VerifyException && $e->getField() === 'paid') {
                     throw $e;
                 }
@@ -477,7 +478,7 @@ class TradePay extends Model
             $this->whereEntity(TradePayField::id($info->id))->saveData($save);
             
             $this->commit();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback();
             
             throw $e;
@@ -491,7 +492,7 @@ class TradePay extends Model
      * @param bool            $checkPay 是否检测业务订单已支付
      * @param bool            $disabledTrans 是否禁用内部事物，默认不禁用
      * @return bool true: 支付成功，false: 已支付过
-     * @throws Exception
+     * @throws Throwable
      */
     public function setPaySuccess(PayNotifyResult $result, bool $checkPay = false, bool $disabledTrans = false) : bool
     {
@@ -527,7 +528,7 @@ class TradePay extends Model
                     $orderStatus       = self::ORDER_STATUS_FAIL;
                     $orderStatusRemark = '重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录';
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $orderStatus       = self::ORDER_STATUS_FAIL;
                 $orderStatusRemark = $e->getMessage();
             }
@@ -550,7 +551,7 @@ class TradePay extends Model
             $this->commit($disabledTrans);
             
             return $return;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback($disabledTrans);
             
             throw $e;
@@ -580,24 +581,74 @@ class TradePay extends Model
     
     
     /**
-     * @inheritDoc
+     * @param TradePayExtendInfo[] $list
+     * @throws DataNotFoundException
      * @throws DbException
      */
     protected function onParseBindExtendList(array &$list)
     {
-        $userKey   = (string) TradePayExtendInfo::user();
-        $userIdKey = (string) TradePayField::userId();
-        $userIds   = [];
+        $userIds = [];
         foreach ($list as $item) {
-            if (isset($item[$userIdKey])) {
-                $userIds[] = $item[$userIdKey];
-            }
+            $userIds[] = $item->userId;
         }
         
-        $userList = $this->getMemberModel()->buildListWithField($userIds);
-        foreach ($list as $i => $r) {
-            $r[$userKey] = $userList[$r[$userIdKey]] ?? null;
-            $list[$i]    = $r;
+        $model       = $this->getMemberModel();
+        $userList    = $model->buildListWithField($userIds);
+        $userParams  = $model->getTradeUserParams();
+        $usernameKey = (string) $userParams->getUsernameField();
+        $phoneKey    = $userParams->getPhoneField() ? (string) $userParams->getPhoneField() : '';
+        $nicknameKey = $userParams->getNicknameField() ? (string) $userParams->getNicknameField() : '';
+        $emailKey    = $userParams->getEmailField() ? (string) $userParams->getEmailField() : '';
+        $callback    = $userParams->getAdminPayOperateUserAttr();
+        foreach ($list as $i => $item) {
+            $item->user = $userList[$item->userId] ?? null;
+            
+            $item->username = $item->user[$usernameKey] ?? '';
+            
+            // 手机号
+            if ($phoneKey) {
+                $item->userPhone = $item->user[$phoneKey] ?? '';
+                if ($item->userPhone && !$item->username) {
+                    $item->username = $item->userPhone;
+                }
+            }
+            
+            // 昵称
+            if ($nicknameKey) {
+                $item->userNickname = $item->user[$nicknameKey] ?? '';
+                if ($item->userNickname && !$item->username) {
+                    $item->username = $item->userNickname;
+                }
+            }
+            
+            // 邮箱
+            if ($emailKey) {
+                $item->userEmail = $item->user[$emailKey] ?? '';
+                if ($item->userEmail && !$item->username) {
+                    $item->username = $item->userEmail;
+                }
+            }
+            
+            // 管理员模板对用户的操作属性
+            $item->adminUserOperateAttr = '';
+            $result                     = null;
+            if ($callback instanceof Closure || is_callable($callback)) {
+                $result = call_user_func_array($callback, [$item]);
+            } elseif ($callback instanceof TradeMemberAdminPayOperateAttr) {
+                $result = $callback->callback($item);
+            }
+            
+            if ($result) {
+                if (is_array($result)) {
+                    $attrs = [];
+                    foreach ($result as $key => $value) {
+                        $attrs[] = "{$key}='{$value}'";
+                    }
+                    $item->adminUserOperateAttr = " " . implode(' ', $attrs);
+                } else {
+                    $item->adminUserOperateAttr = " {$result}";
+                }
+            }
         }
     }
     
@@ -718,7 +769,7 @@ class TradePay extends Model
      * 更新剩余可退金额
      * @param string                                   $orderTradeNo 业务订单号或订单ID
      * @param TradeUpdateRefundAmountInterface|Closure $callback 回调方法
-     * @throws Exception
+     * @throws Throwable
      */
     public function updateRefundAmountByCallback(string $orderTradeNo, $callback)
     {

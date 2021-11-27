@@ -5,9 +5,6 @@ namespace BusyPHP\trade\model\pay;
 
 use BusyPHP\model\Entity;
 use BusyPHP\model\Field;
-use BusyPHP\trade\interfaces\TradeMemberAdminPayOperateAttr;
-use BusyPHP\trade\interfaces\TradeMemberParams;
-use Closure;
 
 /**
  * 支付订单扩展信息结构
@@ -56,70 +53,4 @@ class TradePayExtendInfo extends TradePayInfo
      * @var string
      */
     public $adminUserOperateAttr;
-    
-    /**
-     * @var TradeMemberParams
-     */
-    protected static $_userParams;
-    
-    
-    public function onParseAfter()
-    {
-        if (!isset(static::$_userParams)) {
-            static::$_userParams = TradePay::init()->getMemberModel()->getTradeUserParams();
-        }
-        parent::onParseAfter();
-        
-        // 用户名
-        $this->username = $this->user[(string) static::$_userParams->getUsernameField()] ?? '';
-        
-        // 手机号
-        $phoneField = static::$_userParams->getPhoneField();
-        if ($phoneField) {
-            $this->userPhone = $this->user[(string) $phoneField] ?? '';
-        }
-        if ($this->userPhone && !$this->username) {
-            $this->username = $this->userPhone;
-        }
-        
-        // 昵称
-        $nicknameField = static::$_userParams->getNicknameField();
-        if ($nicknameField) {
-            $this->userNickname = $this->user[(string) $nicknameField] ?? '';
-        }
-        if ($this->userNickname && !$this->username) {
-            $this->username = $this->userNickname;
-        }
-        
-        // 邮箱
-        $emailField = static::$_userParams->getEmailField();
-        if ($emailField) {
-            $this->userEmail = $this->user[(string) $emailField] ?? '';
-        }
-        if ($this->userEmail && !$this->username) {
-            $this->username = $this->userEmail;
-        }
-        
-        // 管理员模板对用户的操作属性
-        $this->adminUserOperateAttr   = '';
-        $adminUserOperateAttrCallback = static::$_userParams->getAdminPayOperateUserAttr();
-        $result                       = null;
-        if ($adminUserOperateAttrCallback instanceof Closure || is_callable($adminUserOperateAttrCallback)) {
-            $result = call_user_func_array($adminUserOperateAttrCallback, [$this]);
-        } elseif ($adminUserOperateAttrCallback instanceof TradeMemberAdminPayOperateAttr) {
-            $result = $adminUserOperateAttrCallback->callback($this);
-        }
-        
-        if ($result) {
-            if (is_array($result)) {
-                $attrs = [];
-                foreach ($result as $key => $item) {
-                    $attrs[] = "{$key}='{$item}'";
-                }
-                $this->adminUserOperateAttr = " " . implode(' ', $attrs);
-            } else {
-                $this->adminUserOperateAttr = " {$result}";
-            }
-        }
-    }
 }

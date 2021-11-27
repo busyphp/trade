@@ -16,14 +16,15 @@ use BusyPHP\trade\interfaces\PayRefundNotify;
 use BusyPHP\trade\interfaces\PayRefundNotifyResult;
 use BusyPHP\trade\interfaces\PayRefundQuery;
 use BusyPHP\trade\interfaces\PayRefundQueryResult;
+use BusyPHP\trade\interfaces\TradeMemberAdminRefundOperateAttr;
 use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\pay\TradePay;
 use BusyPHP\trade\model\pay\TradePayInfo;
 use BusyPHP\trade\model\TradeConfig;
 use BusyPHP\trade\Service;
+use Closure;
 use DomainException;
-use Exception;
 use LogicException;
 use RuntimeException;
 use think\db\exception\DataNotFoundException;
@@ -125,7 +126,7 @@ class TradeRefund extends Model
      * @param bool   $mustRefund 是否强制退款剩余金额
      * @return TradeRefundField
      * @throws ParamInvalidException
-     * @throws Exception
+     * @throws Throwable
      */
     public function joinRefund(string $orderTradeNo, int $orderType = 0, string $orderValue = '', string $refundRemark = '', float $price = 0, bool $mustRefund = false) : TradeRefundField
     {
@@ -201,7 +202,7 @@ class TradeRefund extends Model
                  * 执行更新，内部无需启动事物
                  * @param TradePayInfo $tradePayInfo
                  * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                 * @throws Exception
+                 * @throws Throwable
                  */
                 public function onUpdate(TradePayInfo $tradePayInfo) : ?float
                 {
@@ -263,25 +264,74 @@ class TradeRefund extends Model
     
     
     /**
-     * @param array $list
+     * @param TradeRefundExtendInfo[] $list
      * @throws DataNotFoundException
      * @throws DbException
      */
     protected function onParseBindExtendList(array &$list)
     {
-        $userKey   = (string) TradeRefundExtendInfo::user();
-        $userIdKey = (string) TradeRefundField::userId();
-        $userIds   = [];
+        $userIds = [];
         foreach ($list as $item) {
-            if (isset($item[$userIdKey])) {
-                $userIds[] = $item[$userIdKey];
-            }
+            $userIds[] = $item->userId;
         }
         
-        $userList = TradePay::init()->getMemberModel()->buildListWithField($userIds);
-        foreach ($list as $i => $r) {
-            $r[$userKey] = $userList[$r[$userIdKey]] ?? null;
-            $list[$i]    = $r;
+        $model       = TradePay::init()->getMemberModel();
+        $userList    = $model->buildListWithField($userIds);
+        $userParams  = $model->getTradeUserParams();
+        $usernameKey = (string) $userParams->getUsernameField();
+        $phoneKey    = $userParams->getPhoneField() ? (string) $userParams->getPhoneField() : '';
+        $nicknameKey = $userParams->getNicknameField() ? (string) $userParams->getNicknameField() : '';
+        $emailKey    = $userParams->getEmailField() ? (string) $userParams->getEmailField() : '';
+        $callback    = $userParams->getAdminRefundOperateUserAttr();
+        foreach ($list as $i => $item) {
+            $item->user = $userList[$item->userId] ?? null;
+            
+            $item->username = $item->user[$usernameKey] ?? '';
+            
+            // 手机号
+            if ($phoneKey) {
+                $item->userPhone = $item->user[$phoneKey] ?? '';
+                if ($item->userPhone && !$item->username) {
+                    $item->username = $item->userPhone;
+                }
+            }
+            
+            // 昵称
+            if ($nicknameKey) {
+                $item->userNickname = $item->user[$nicknameKey] ?? '';
+                if ($item->userNickname && !$item->username) {
+                    $item->username = $item->userNickname;
+                }
+            }
+            
+            // 邮箱
+            if ($emailKey) {
+                $item->userEmail = $item->user[$emailKey] ?? '';
+                if ($item->userEmail && !$item->username) {
+                    $item->username = $item->userEmail;
+                }
+            }
+            
+            // 管理员模板对用户的操作属性
+            $item->adminUserOperateAttr = '';
+            $result                     = null;
+            if ($callback instanceof Closure || is_callable($callback)) {
+                $result = call_user_func_array($callback, [$item]);
+            } elseif ($callback instanceof TradeMemberAdminRefundOperateAttr) {
+                $result = $callback->callback($item);
+            }
+            
+            if ($result) {
+                if (is_array($result)) {
+                    $attrs = [];
+                    foreach ($result as $key => $value) {
+                        $attrs[] = "{$key}='{$value}'";
+                    }
+                    $item->adminUserOperateAttr = " " . implode(' ', $attrs);
+                } else {
+                    $item->adminUserOperateAttr = " {$result}";
+                }
+            }
         }
     }
     
@@ -306,7 +356,7 @@ class TradeRefund extends Model
     /**
      * 执行单步三方退款
      * @param int $id 订单ID
-     * @throws Exception
+     * @throws Throwable
      */
     public function refund($id)
     {
@@ -397,7 +447,7 @@ class TradeRefund extends Model
                      * 执行更新，内部无需启动事物
                      * @param TradePayInfo $tradePayInfo
                      * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Exception
+                     * @throws Throwable
                      */
                     public function onUpdate(TradePayInfo $tradePayInfo) : ?float
                     {
@@ -411,7 +461,7 @@ class TradeRefund extends Model
                                 // 触发业务订单状态
                                 $modal = TradePay::init()->getOrderModel($this->refundInfo->orderTradeNo);
                                 $modal->setRefundStatus($this->refundInfo, $tradePayInfo, false, $this->update->failRemark);
-                            } catch (Exception $e) {
+                            } catch (Throwable $e) {
                                 TradeRefund::log("退款失败处理完成，但通知业务订单失败", __METHOD__)->error($e);
                             }
                             
@@ -423,7 +473,7 @@ class TradeRefund extends Model
                 });
             
             $this->commit();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback();
             
             throw $e;
@@ -524,7 +574,7 @@ class TradeRefund extends Model
             if (!$notify instanceof PayRefundNotify) {
                 throw new ClassNotImplementsException($class, PayRefundNotify::class, '异步处理程序');
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
             throw new HttpException(503, $e->getMessage());
         }
@@ -556,7 +606,7 @@ class TradeRefund extends Model
     /**
      * 重试退款
      * @param $id
-     * @throws Exception
+     * @throws Throwable
      */
     public function retryRefund($id)
     {
@@ -591,7 +641,7 @@ class TradeRefund extends Model
                      * 执行更新，内部无需启动事物
                      * @param TradePayInfo $tradePayInfo
                      * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Exception
+                     * @throws Throwable
                      */
                     public function onUpdate(TradePayInfo $tradePayInfo) : ?float
                     {
@@ -607,7 +657,7 @@ class TradeRefund extends Model
                 });
             
             $this->commit();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->rollback();
             
             throw $e;
@@ -685,7 +735,7 @@ class TradeRefund extends Model
                      * 执行更新，内部无需启动事物
                      * @param TradePayInfo $tradePayInfo
                      * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Exception
+                     * @throws Throwable
                      */
                     public function onUpdate(TradePayInfo $tradePayInfo) : ?float
                     {
@@ -776,7 +826,7 @@ class TradeRefund extends Model
                 
                 return $info->id;
             }, '退款任务-加入退款列队锁');
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log("加入退款下单列队", __METHOD__)->error($e);
         }
         
@@ -801,7 +851,7 @@ class TradeRefund extends Model
                 if ($result > 0) {
                     self::log('回收退款下单任务')->info("{$result}条");
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 self::log("回收退款下单任务", __METHOD__)->error($e);
             }
         }
@@ -817,7 +867,7 @@ class TradeRefund extends Model
             self::log($tag)->info("开始: {$infoId}");
             $this->refund($infoId);
             self::log($tag)->info("完成: {$infoId}");
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log($tag, __METHOD__)->error($e);
         }
     }
@@ -855,7 +905,7 @@ class TradeRefund extends Model
                 
                 return $info->id;
             }, '退款任务-加入查询列队锁');
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             self::log('加入退款查询列队', __METHOD__)->error($e);
         }
         
@@ -879,7 +929,7 @@ class TradeRefund extends Model
                 if ($result > 0) {
                     self::log('回收退款查询任务')->info("{$result}条");
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 self::log('回收退款查询任务', __METHOD__)->error($e);
             }
         }
