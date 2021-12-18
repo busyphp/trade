@@ -17,7 +17,7 @@
 	"require"     : {
 		"php"             : ">=7.1.0",
 		"ext-json"        : "*",
-		"busyphp/busyphp" : "^6.0",
+		"busyphp/busyphp" : "^6.0.1",
 		"busyphp/swoole"  : "^2.0"
 	},
 	"require-dev" : {

@@ -87,7 +87,7 @@ class TradeController extends AdminController
                         
                         $model->whereEntity(TradePayField::userId('in', $this->memberModel->field($this->userParams->getIdField())
                             ->where($field, $op, $word)
-                            ->buildSql())->setValueToRaw(true));
+                            ->buildSql())->raw(true));
                         
                         return '';
                     }
@@ -114,7 +114,7 @@ class TradeController extends AdminController
                         case 3:
                             $model->whereEntity(TradePayField::payTime('>', 0));
                             $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())
-                                ->setValueToRaw(true));
+                                ->raw(true));
                         break;
                     }
                     $data->remove('status');
@@ -334,7 +334,7 @@ class TradeController extends AdminController
                         
                         $model->whereEntity(TradePayField::userId('in', $this->memberModel->field($this->userParams->getIdField())
                             ->where($field, $op, $word)
-                            ->buildSql())->setValueToRaw(true));
+                            ->buildSql())->raw(true));
                         
                         return '';
                     }
