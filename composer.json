@@ -29,6 +29,11 @@
 		}
 	},
 	"extra"       : {
+		"think"   : {
+			"config" : {
+				"swoole" : "src/config/config.php"
+			}
+		},
 		"busyphp" : {
 			"manager"  : {
 				"name"    : "交易中心模块",
@@ -48,10 +53,7 @@
 			},
 			"services" : [
 				"BusyPHP\\trade\\Service"
-			],
-			"config"   : {
-				"trade" : "src/config/config.php"
-			}
+			]
 		}
 	},
 	"config"      : {
