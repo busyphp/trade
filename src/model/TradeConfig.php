@@ -14,9 +14,6 @@ use Exception;
  */
 trait TradeConfig
 {
-    private $isLoad = false;
-    
-    
     /**
      * 获取配置
      * @param string $name 配置名称
@@ -25,14 +22,7 @@ trait TradeConfig
      */
     public function getTradeConfig($name, $default = null)
     {
-        $app = App::getInstance();
-        if (!$this->isLoad) {
-            $app->config->load($app->getRootPath() . 'config' . DIRECTORY_SEPARATOR . 'extend' . DIRECTORY_SEPARATOR . 'trade.php', 'trade');
-            
-            $this->isLoad = true;
-        }
-        
-        return $app->config->get('trade.' . $name, $default);
+        return App::getInstance()->config->get('trade' . ($name ? ".{$name}" : ''), $default);
     }
     
     
