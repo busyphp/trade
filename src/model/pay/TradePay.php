@@ -42,9 +42,11 @@ use Throwable;
  * @method TradePayInfo getInfo($data, $notFoundMessage = null)
  * @method TradePayInfo findInfo($data = null, $notFoundMessage = null)
  * @method TradePayInfo[] selectList()
+ * @method TradePayInfo[] buildListWithField(array $values, $key = null, $field = null) : array
  * @method TradePayExtendInfo getExtendInfo($data, $notFoundMessage = null)
  * @method TradePayExtendInfo findExtendInfo($data = null, $notFoundMessage = null)
  * @method TradePayExtendInfo[] selectExtendList()
+ * @method TradePayExtendInfo[] buildExtendListWithField(array $values, $key = null, $field = null) : array
  */
 class TradePay extends Model
 {

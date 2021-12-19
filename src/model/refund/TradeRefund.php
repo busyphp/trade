@@ -45,9 +45,11 @@ use Throwable;
  * @method TradeRefundInfo getInfo($data, $notFoundMessage = null)
  * @method TradeRefundInfo findInfo($data = null, $notFoundMessage = null)
  * @method TradeRefundInfo[] selectList()
+ * @method TradeRefundInfo[] buildListWithField(array $values, $key = null, $field = null) : array
  * @method TradeRefundExtendInfo getExtendInfo($data, $notFoundMessage = null)
  * @method TradeRefundExtendInfo findExtendInfo($data = null, $notFoundMessage = null)
  * @method TradeRefundExtendInfo[] selectExtendList()
+ * @method TradeRefundExtendInfo[] buildExtendListWithField(array $values, $key = null, $field = null) : array
  */
 class TradeRefund extends Model
 {
@@ -555,7 +557,7 @@ class TradeRefund extends Model
             $result->setErrMsg($e->getMessage());
         }
         
-        // 等待结果的 或者 进入查询列队的，则设置状态
+        // 等待结果的则设置状态
         if ($info->isPending) {
             $this->setRefundStatus($result);
             $isSetStatus = true;

@@ -19,10 +19,15 @@ class RefundJob implements JobInterface
      * 执行任务
      * @param Job   $job 任务对象
      * @param mixed $data 发布任务时自定义的数据
-     * @throws Throwable
      */
     public function fire(Job $job, $data) : void
     {
-        TradeRefund::init()->refund($data);
+        TradeRefund::log("退款下单")->info("开始: {$data}");
+        try {
+            TradeRefund::init()->refund($data);
+            TradeRefund::log("退款下单")->info("完成: {$data}");
+        } catch (Throwable $e) {
+            TradeRefund::log("退款查询失败: {$data}")->error($e);
+        }
     }
 }
