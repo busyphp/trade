@@ -22,7 +22,6 @@ use BusyPHP\trade\model\pay\TradePayField;
 use BusyPHP\trade\model\refund\TradeRefund;
 use BusyPHP\trade\model\refund\TradeRefundExtendInfo;
 use BusyPHP\trade\model\refund\TradeRefundField;
-use Exception;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\Response;
@@ -113,8 +112,7 @@ class TradeController extends AdminController
                         break;
                         case 3:
                             $model->whereEntity(TradePayField::payTime('>', 0));
-                            $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())
-                                ->raw(true));
+                            $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())->raw(true));
                         break;
                     }
                     $data->remove('status');
@@ -190,7 +188,7 @@ class TradeController extends AdminController
     /**
      * 恢复业务订单
      * @return Response
-     * @throws Exception
+     * @throws Throwable
      */
     public function pay_order_success()
     {
@@ -206,7 +204,7 @@ class TradeController extends AdminController
      * @return Response
      * @throws DataNotFoundException
      * @throws DbException
-     * @throws Exception
+     * @throws Throwable
      */
     public function pay_success()
     {
@@ -254,7 +252,7 @@ class TradeController extends AdminController
      * @return Response
      * @throws DataNotFoundException
      * @throws DbException
-     * @throws Exception
+     * @throws Throwable
      */
     public function pay_apply_refund()
     {
@@ -362,8 +360,6 @@ class TradeController extends AdminController
                             $model->whereEntity(TradeRefundField::status('in', [
                                 TradeRefund::REFUND_STATUS_WAIT,
                                 TradeRefund::REFUND_STATUS_PENDING,
-                                TradeRefund::REFUND_STATUS_IN_QUERY_QUEUE,
-                                TradeRefund::REFUND_STATUS_IN_REFUND_QUEUE,
                             ]));
                         break;
                         case 4:
@@ -428,7 +424,7 @@ class TradeController extends AdminController
     /**
      * 重试退款
      * @return Response
-     * @throws Exception
+     * @throws Throwable
      */
     public function refund_retry()
     {

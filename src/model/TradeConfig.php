@@ -4,6 +4,7 @@ namespace BusyPHP\trade\model;
 
 use BusyPHP\App;
 use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
+use BusyPHP\helper\FilterHelper;
 use Exception;
 
 /**
@@ -32,12 +33,36 @@ trait TradeConfig
      * @param mixed  $default
      * @return mixed
      */
-    public function getSetting(string $key, $default = null)
+    public function getTradeSetting(string $key, $default = null)
     {
         try {
             return SystemPlugin::init()->getSetting('busyphp/trade', $key, $default);
         } catch (Exception $e) {
             return $default;
         }
+    }
+    
+    
+    /**
+     * 获取需重新查询退款状态的任务延迟查询秒数
+     * @return int
+     */
+    public function getRefundQueryDelay() : int
+    {
+        $delay = $this->getTradeSetting('refund_query_delay', $this->getTradeSetting('refund_queue.query_delay', 3600));
+        
+        return FilterHelper::min($delay, 0);
+    }
+    
+    
+    /**
+     * 获取需重新退款的任务延迟执行秒数
+     * @return int
+     */
+    public function getRefundSubmitDelay() : int
+    {
+        $delay = $this->getTradeSetting('refund_submit_delay', $this->getTradeSetting('refund_queue.submit_delay', 3600));
+        
+        return FilterHelper::min($delay, 0);
     }
 }

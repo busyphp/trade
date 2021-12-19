@@ -69,7 +69,6 @@ class ManagerController extends PluginManager
     `fail_remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '失败备注',
     `refund_account` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '退入账户说明',
     `create_time` INT(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
-    `queue_time` INT(11) NOT NULL DEFAULT '0' COMMENT '加入列队的时间',
     `start_time` INT(11) NOT NULL DEFAULT '0' COMMENT '开始执行退款时间',
     `complete_time` INT(11) NOT NULL DEFAULT '0' COMMENT '退款完成时间',
     `order_trade_no` CHAR(22) NOT NULL DEFAULT '' COMMENT '业务订单号',
@@ -256,13 +255,9 @@ class ManagerController extends PluginManager
     public function setting() : Response
     {
         if ($this->isPost()) {
-            $data                    = $this->param('data/a');
-            $data['submit_interval'] = intval($data['submit_interval']);
-            $data['submit_timeout']  = intval($data['submit_timeout']);
-            $data['submit_delay']    = intval($data['submit_delay']);
-            $data['query_interval']  = intval($data['query_interval']);
-            $data['query_timeout']   = intval($data['query_timeout']);
-            $data['query_delay']     = intval($data['query_delay']);
+            $data                        = $this->param('data/a');
+            $data['refund_submit_delay'] = intval($data['refund_submit_delay']);
+            $data['refund_query_delay']  = intval($data['refund_query_delay']);
             
             SystemPlugin::init()->setSetting($this->info->package, $data);
             $this->logSetting();
