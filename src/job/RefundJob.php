@@ -5,6 +5,7 @@ namespace BusyPHP\trade\job;
 use BusyPHP\queue\contract\JobInterface;
 use BusyPHP\queue\Job;
 use BusyPHP\trade\model\refund\TradeRefund;
+use BusyPHP\trade\model\TradeConfig;
 use Throwable;
 
 /**
@@ -15,6 +16,8 @@ use Throwable;
  */
 class RefundJob implements JobInterface
 {
+    use TradeConfig;
+    
     /**
      * 执行任务
      * @param Job   $job 任务对象
@@ -22,12 +25,28 @@ class RefundJob implements JobInterface
      */
     public function fire(Job $job, $data) : void
     {
+        if ($job->attempts() > 10) {
+            $job->delete();
+            
+            TradeRefund::log("退款下单")->info("超过10次尝试，不在入队，ID: {$data}");
+            
+            return;
+        }
+        
         TradeRefund::log("退款下单")->info("开始: {$data}");
+        
         try {
             TradeRefund::init()->refund($data);
+            
             TradeRefund::log("退款下单")->info("完成: {$data}");
         } catch (Throwable $e) {
-            TradeRefund::log("退款查询失败: {$data}")->error($e);
+            $job->release($this->getRefundSubmitDelay());
+            
+            TradeRefund::log("退款下单失败: {$data}")->error($e);
+            
+            return;
         }
+        
+        $job->delete();
     }
 }
