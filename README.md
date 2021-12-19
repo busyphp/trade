@@ -31,7 +31,7 @@ php think queue:work plugin_trade --queue plugin_trade_refund --delay 3600 --sle
 ```
 
 
-## 配置 `config/extend/trade.php`
+## 配置 `config/trade.php`
 
 ```php
 <?php
