@@ -20,7 +20,6 @@ use BusyPHP\model\Field;
  * @method static Entity failRemark($op = null, $value = null) 失败备注
  * @method static Entity refundAccount($op = null, $value = null) 退入账户说明
  * @method static Entity createTime($op = null, $value = null) 创建时间
- * @method static Entity queueTime($op = null, $value = null) 加入列队的时间
  * @method static Entity startTime($op = null, $value = null) 开始执行退款时间
  * @method static Entity completeTime($op = null, $value = null) 退款完成时间
  * @method static Entity orderTradeNo($op = null, $value = null) 业务订单号
@@ -87,12 +86,6 @@ class TradeRefundField extends Field
      * @var int
      */
     public $createTime;
-    
-    /**
-     * 加入列队的时间
-     * @var int
-     */
-    public $queueTime;
     
     /**
      * 开始执行退款时间

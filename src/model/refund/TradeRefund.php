@@ -4,13 +4,13 @@ declare(strict_types = 1);
 namespace BusyPHP\trade\model\refund;
 
 use BusyPHP\App;
-use BusyPHP\app\admin\model\system\lock\SystemLock;
 use BusyPHP\exception\ClassNotFoundException;
 use BusyPHP\exception\ClassNotImplementsException;
 use BusyPHP\exception\ParamInvalidException;
 use BusyPHP\exception\VerifyException;
 use BusyPHP\helper\LogHelper;
 use BusyPHP\Model;
+use BusyPHP\queue\facade\Queue;
 use BusyPHP\trade\interfaces\PayRefund;
 use BusyPHP\trade\interfaces\PayRefundNotify;
 use BusyPHP\trade\interfaces\PayRefundNotifyResult;
@@ -18,6 +18,8 @@ use BusyPHP\trade\interfaces\PayRefundQuery;
 use BusyPHP\trade\interfaces\PayRefundQueryResult;
 use BusyPHP\trade\interfaces\TradeMemberAdminRefundOperateAttr;
 use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
+use BusyPHP\trade\job\QueryJob;
+use BusyPHP\trade\job\RefundJob;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\pay\TradePay;
 use BusyPHP\trade\model\pay\TradePayInfo;
@@ -57,14 +59,8 @@ class TradeRefund extends Model
     /** @var int 等待退款 */
     const REFUND_STATUS_WAIT = 0;
     
-    /** @var int 已进入退款列队 */
-    const REFUND_STATUS_IN_REFUND_QUEUE = 1;
-    
     /** @var int 退款中 */
-    const REFUND_STATUS_PENDING = 2;
-    
-    /** @var int 已进入查询列队 */
-    const REFUND_STATUS_IN_QUERY_QUEUE = 3;
+    const REFUND_STATUS_PENDING = 1;
     
     /** @var int 等待手动处理 */
     const REFUND_STATUS_WAIT_MANUAL = 7;
@@ -113,6 +109,28 @@ class TradeRefund extends Model
         }
         
         return $log;
+    }
+    
+    
+    /**
+     * 发布任务到队列中
+     * @param string $job 任务Job
+     * @param int    $id 退款记录ID
+     */
+    public function queuePush($job, $id)
+    {
+        Queue::connection('plugin_trade_refund')->push($job, $id, 'refund');
+    }
+    
+    
+    /**
+     * 发布延迟执行任务到队列中
+     * @param string $job 任务Job
+     * @param int    $id 退款记录ID
+     */
+    public function queueLater($delay, $job, $id)
+    {
+        Queue::connection('plugin_trade_refund')->later($delay, $job, $id, 'refund');
     }
     
     
@@ -255,6 +273,9 @@ class TradeRefund extends Model
                     $this->insert->remark        = $this->refundRemark;
                     $this->insert->id            = $this->refundTarget->addData($this->insert);
                     
+                    // 发布退款任务到队列中
+                    $this->refundTarget->queuePush(RefundJob::class, $this->insert->id);
+                    
                     return 0 - $this->price;
                 }
             });
@@ -363,8 +384,8 @@ class TradeRefund extends Model
         $this->startTrans();
         try {
             $info = $this->lock(true)->getInfo($id);
-            if (!$info->isRefundInQueue) {
-                throw new LogicException('当前订单未进入退款列队，无法执行退款');
+            if (!$info->isWait) {
+                throw new LogicException("当前订单状为{$info->statusName}，无法执行退款");
             }
             
             $payType           = $info->payType;
@@ -390,8 +411,7 @@ class TradeRefund extends Model
                 
                 // 需要重新处理
                 if ($result->isNeedRehandle()) {
-                    $update->status    = self::REFUND_STATUS_WAIT;
-                    $update->queueTime = time();
+                    $update->status = self::REFUND_STATUS_WAIT;
                 }
                 
                 //
@@ -405,15 +425,13 @@ class TradeRefund extends Model
                     }
                     
                     // 加入列队
-                    $update->status    = self::REFUND_STATUS_PENDING;
-                    $update->queueTime = 0;
+                    $update->status = self::REFUND_STATUS_PENDING;
                 }
             } catch (Throwable $e) {
                 // 退款失败
                 $update->status       = self::REFUND_STATUS_FAIL;
                 $update->failRemark   = $e->getMessage();
                 $update->completeTime = time();
-                $update->queueTime    = 0;
             }
             
             
@@ -472,6 +490,18 @@ class TradeRefund extends Model
                     }
                 });
             
+            // 需要重新处理
+            // 重新加入退款队列
+            if ($update->status == self::REFUND_STATUS_WAIT) {
+                $this->queueLater($this->getRefundSubmitDelay(), RefundJob::class, $info->id);
+            }
+            
+            // 退款申请成功
+            // 加入到查询队列
+            elseif ($update->status == self::REFUND_STATUS_PENDING) {
+                $this->queueLater($this->getRefundQueryDelay(), QueryJob::class, $info->id);
+            }
+            
             $this->commit();
         } catch (Throwable $e) {
             $this->rollback();
@@ -526,7 +556,7 @@ class TradeRefund extends Model
         }
         
         // 等待结果的 或者 进入查询列队的，则设置状态
-        if ($info->isPending || $info->isQueryInQueue) {
+        if ($info->isPending) {
             $this->setRefundStatus($result);
             $isSetStatus = true;
         }
@@ -645,12 +675,14 @@ class TradeRefund extends Model
                      */
                     public function onUpdate(TradePayInfo $tradePayInfo) : ?float
                     {
-                        $update            = TradeRefundField::init();
-                        $update->status    = TradeRefund::REFUND_STATUS_WAIT;
-                        $update->queueTime = time();
+                        $update         = TradeRefundField::init();
+                        $update->status = TradeRefund::REFUND_STATUS_WAIT;
                         TradeRefund::init()
                             ->whereEntity(TradeRefundField::id($this->refundInfo->id))
                             ->saveData($update);
+                        
+                        // 发布任务到队列中
+                        $this->refundTarget->queuePush(RefundJob::class, $this->refundInfo->id);
                         
                         return 0 - $this->refundInfo->refundPrice;
                     }
@@ -699,7 +731,7 @@ class TradeRefund extends Model
             } else {
                 // 不是等待中
                 // 不是等待查询中
-                if (!$info->isPending && !$info->isQueryInQueue) {
+                if (!$info->isPending) {
                     throw new VerifyException('该退款订单已处理过', 'refunded');
                 }
             }
@@ -744,12 +776,10 @@ class TradeRefund extends Model
                         
                         // 需要重新处理的
                         if ($this->result->isNeedReHandle()) {
-                            $update->status    = TradeRefund::REFUND_STATUS_PENDING;
-                            $update->queueTime = time();
+                            $update->status = TradeRefund::REFUND_STATUS_PENDING;
                         } else {
                             $update->status       = $this->result->isStatus() ? TradeRefund::REFUND_STATUS_SUCCESS : TradeRefund::REFUND_STATUS_FAIL;
                             $update->completeTime = time();
-                            $update->queueTime    = 0;
                             
                             if ($this->result->getApiRefundNo()) {
                                 $update->apiRefundNo = $this->result->getApiRefundNo();
@@ -776,6 +806,12 @@ class TradeRefund extends Model
                             TradeRefund::log('退款处理完成，但通知业务订单失败', __METHOD__)->error($e);
                         }
                         
+                        // 需要重新处理的
+                        // 发布查询任务到队列中
+                        if ($update->status == TradeRefund::REFUND_STATUS_PENDING) {
+                            $this->refundTarget->queueLater($this->refundTarget->getRefundQueryDelay(), QueryJob::class, $this->refundInfo->id);
+                        }
+                        
                         // 退款失败的要还原支付订单可退款金额
                         if (!$this->result->isStatus()) {
                             return 0 - $this->refundInfo->refundPrice;
@@ -790,162 +826,6 @@ class TradeRefund extends Model
             $this->rollback();
             
             throw $e;
-        }
-    }
-    
-    
-    /**
-     * 退款任务
-     */
-    public function taskRefund()
-    {
-        $delaySec    = (int) $this->getSetting('submit_delay', 0);
-        $recoverySec = (int) $this->getSetting('submit_timeout', 0);
-        $infoId      = null;
-        try {
-            $infoId = SystemLock::init()->do('trade_task_refund', function() use ($delaySec) {
-                $delayTime = time() - $delaySec;
-                
-                // 无锁查询一条记录，防止锁表
-                // 虽然会出现资源浪费，但目前只有这种办法方式争抢
-                $id = $this->field(TradeRefundField::id())
-                    ->whereEntity(TradeRefundField::status(self::REFUND_STATUS_WAIT))
-                    ->whereEntity(TradeRefundField::queueTime('<', $delayTime))
-                    ->order(TradeRefundField::id(), 'asc')
-                    ->val(TradeRefundField::id());
-                if (!$id) {
-                    return null;
-                }
-                
-                // 锁定单条记录
-                $info            = $this->lock(true)->getInfo($id);
-                $save            = TradeRefundField::init();
-                $save->status    = self::REFUND_STATUS_IN_REFUND_QUEUE;
-                $save->queueTime = time();
-                $this->whereEntity(TradeRefundField::id($info->id))->saveData($save);
-                
-                return $info->id;
-            }, '退款任务-加入退款列队锁');
-        } catch (Throwable $e) {
-            self::log("加入退款下单列队", __METHOD__)->error($e);
-        }
-        
-        
-        // 回收超时的订单
-        if ($recoverySec > 0) {
-            try {
-                $save            = TradeRefundField::init();
-                $save->status    = self::REFUND_STATUS_WAIT;
-                $save->queueTime = time();
-                
-                $result = $this
-                    // 在列队中
-                    ->whereEntity(TradeRefundField::status(self::REFUND_STATUS_IN_REFUND_QUEUE))
-                    // queueTime必须大于0
-                    ->whereEntity(TradeRefundField::queueTime('>', 0))
-                    // 进入列队的时间 小于 当前时间减去延迟执行时间
-                    ->whereEntity(TradeRefundField::queueTime('<', time() - $recoverySec))
-                    // 回收
-                    ->saveData($save);
-                
-                if ($result > 0) {
-                    self::log('回收退款下单任务')->info("{$result}条");
-                }
-            } catch (Throwable $e) {
-                self::log("回收退款下单任务", __METHOD__)->error($e);
-            }
-        }
-        
-        
-        if (!$infoId) {
-            return;
-        }
-        
-        
-        $tag = "执行退款下单";
-        try {
-            self::log($tag)->info("开始: {$infoId}");
-            $this->refund($infoId);
-            self::log($tag)->info("完成: {$infoId}");
-        } catch (Throwable $e) {
-            self::log($tag, __METHOD__)->error($e);
-        }
-    }
-    
-    
-    /**
-     * 查询任务
-     */
-    public function taskQuery()
-    {
-        $delaySec    = (int) $this->getSetting('query_delay', 0);
-        $recoverySec = (int) $this->getSetting('query_timeout', 0);
-        $infoId      = null;
-        try {
-            $infoId = SystemLock::init()->do('trade_task_query', function() use ($delaySec) {
-                $delayTime = time() - $delaySec;
-                
-                // 无锁查询一次，防止锁表
-                // 虽然会出现资源浪费，但目前只有这种办法方式争抢
-                $id = $this->field(TradeRefundField::id())
-                    ->whereEntity(TradeRefundField::status(self::REFUND_STATUS_PENDING))
-                    ->whereEntity(TradeRefundField::queueTime('<', $delayTime))
-                    ->order(TradeRefundField::id(), 'asc')
-                    ->val(TradeRefundField::id());
-                if (!$id) {
-                    return null;
-                }
-                
-                // 锁定单条记录
-                $info            = $this->lock(true)->getInfo($id);
-                $save            = TradeRefundField::init();
-                $save->status    = self::REFUND_STATUS_IN_QUERY_QUEUE;
-                $save->queueTime = time();
-                $this->whereEntity(TradeRefundField::id($info->id))->saveData($save);
-                
-                return $info->id;
-            }, '退款任务-加入查询列队锁');
-        } catch (Throwable $e) {
-            self::log('加入退款查询列队', __METHOD__)->error($e);
-        }
-        
-        
-        // 回收超时的订单
-        if ($recoverySec > 0) {
-            try {
-                $save            = TradeRefundField::init();
-                $save->status    = self::REFUND_STATUS_PENDING;
-                $save->queueTime = time();
-                
-                $result = $this
-                    // 必须是在查询列队中状态
-                    ->whereEntity(TradeRefundField::status(self::REFUND_STATUS_IN_QUERY_QUEUE))
-                    // 列队时间大于0
-                    ->whereEntity(TradeRefundField::queueTime('>', 0))
-                    // 进入列队的时间 小于 当前时间减去延迟执行时间
-                    ->whereEntity(TradeRefundField::queueTime('<', time() - $recoverySec))
-                    // 回收
-                    ->saveData($save);
-                if ($result > 0) {
-                    self::log('回收退款查询任务')->info("{$result}条");
-                }
-            } catch (Throwable $e) {
-                self::log('回收退款查询任务', __METHOD__)->error($e);
-            }
-        }
-        
-        
-        if (!$infoId) {
-            return;
-        }
-        
-        $tag = "执行退款查询";
-        try {
-            self::log($tag)->info("开始: {$infoId}");
-            $this->inquiry($infoId);
-            self::log($tag)->info("完成: {$infoId}");
-        } catch (Throwable $e) {
-            self::log($tag, __METHOD__)->error($e);
         }
     }
 }
