@@ -121,18 +121,19 @@ class TradeRefund extends Model
      */
     public function queuePush($job, $id)
     {
-        Queue::connection('plugin_trade_refund')->push($job, $id, 'refund');
+        Queue::connection('plugin_trade')->push($job, $id, 'plugin_trade_refund');
     }
     
     
     /**
      * 发布延迟执行任务到队列中
+     * @param int    $delay 延迟执行秒数
      * @param string $job 任务Job
      * @param int    $id 退款记录ID
      */
     public function queueLater($delay, $job, $id)
     {
-        Queue::connection('plugin_trade_refund')->later($delay, $job, $id, 'refund');
+        Queue::connection('plugin_trade')->later($delay, $job, $id, 'plugin_trade_refund');
     }
     
     
