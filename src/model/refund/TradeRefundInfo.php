@@ -19,8 +19,6 @@ use BusyPHP\trade\model\pay\TradePay;
  * @method static Entity isFail() 是否退款失败
  * @method static Entity isPending() 是否退款中
  * @method static Entity isWait() 是否等待退款
- * @method static Entity isRefundInQueue() 是否进入退款列队
- * @method static Entity isQueryInQueue() 是否进入查询列队
  * @method static Entity statusName() 状态名称
  * @method static Entity payTypeName() 支付方式名称
  * @method static Entity payName() 支付方式别名
@@ -77,18 +75,6 @@ class TradeRefundInfo extends TradeRefundField
      * @var bool
      */
     public $isWaitManual;
-    
-    /**
-     * 是否进入退款列队
-     * @var bool
-     */
-    public $isRefundInQueue;
-    
-    /**
-     * 是否进入查询列队
-     * @var bool
-     */
-    public $isQueryInQueue;
     
     /**
      * 状态名称
@@ -160,18 +146,16 @@ class TradeRefundInfo extends TradeRefundField
         $this->payType            = (int) $this->payType;
         $this->status             = (int) $this->status;
         
-        $this->isSuccess       = $this->status == TradeRefund::REFUND_STATUS_SUCCESS;
-        $this->isFail          = $this->status == TradeRefund::REFUND_STATUS_FAIL;
-        $this->isPending       = $this->status == TradeRefund::REFUND_STATUS_PENDING;
-        $this->isWait          = $this->status == TradeRefund::REFUND_STATUS_WAIT;
-        $this->isQueryInQueue  = $this->status == TradeRefund::REFUND_STATUS_IN_QUERY_QUEUE;
-        $this->isRefundInQueue = $this->status == TradeRefund::REFUND_STATUS_IN_REFUND_QUEUE;
-        $this->isWaitManual    = $this->status == TradeRefund::REFUND_STATUS_WAIT_MANUAL;
-        $this->statusName      = static::$_status[$this->status] ?? '';
+        $this->isSuccess    = $this->status == TradeRefund::REFUND_STATUS_SUCCESS;
+        $this->isFail       = $this->status == TradeRefund::REFUND_STATUS_FAIL;
+        $this->isPending    = $this->status == TradeRefund::REFUND_STATUS_PENDING;
+        $this->isWait       = $this->status == TradeRefund::REFUND_STATUS_WAIT;
+        $this->isWaitManual = $this->status == TradeRefund::REFUND_STATUS_WAIT_MANUAL;
+        $this->statusName   = static::$_status[$this->status] ?? '';
         
         $this->canRetry   = $this->isFail;
         $this->canSuccess = $this->isFail || $this->isWaitManual;
-        $this->canQuery   = ($this->isPending || $this->isQueryInQueue || $this->isSuccess) && !TradePay::checkPayTypeIsManual($this->payType);
+        $this->canQuery   = ($this->isPending || $this->isSuccess) && !TradePay::checkPayTypeIsManual($this->payType);
         
         // 支付类型
         if ($types = static::$_payTypes[$this->payType] ?? []) {
