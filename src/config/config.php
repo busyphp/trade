@@ -28,17 +28,25 @@ return [
     // 退款队列配置
     'refund_queue'     => [
         // 是否启用
-        'enable'     => false,
+        'enable'       => false,
+        
+        // 获取需重新退款的任务延迟执行秒数
+        // 优先插件管理设置中的值
+        'submit_delay' => 3600,
+        
+        // 获取需重新查询退款状态的任务延迟查询秒数
+        // 优先插件管理设置中的值
+        'query_delay'  => 3600,
         
         // 参见 config/queue.php 中的 connections
-        'connection' => [
+        'connection'   => [
             'type'  => 'database',
             'queue' => 'plugin_trade_refund',
             'table' => 'system_jobs',
         ],
         
         // 参见 config/swoole.php 中的 queue
-        'worker'     => [
+        'worker'       => [
             'number'  => 1,
             'delay'   => 3600,
             'sleep'   => 60,
