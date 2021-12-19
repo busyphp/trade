@@ -157,10 +157,6 @@
         <span class="badge badge-danger" data-toggle="tooltip" title="失败原因：{{item.fail_remark || '无'}}">{{value}}</span>
         {{else if item.is_pending}}
         <span class="badge badge-primary" data-toggle="tooltip" title="等待三方执行退款">{{value}}</span>
-        {{else if item.is_refund_in_queue}}
-        <span class="badge badge-info" data-toggle="tooltip" title="等待下单到三方">{{value}}</span>
-        {{else if item.is_query_in_queue}}
-        <span class="badge badge-warning" data-toggle="tooltip" title="查询三方退款结果中">{{value}}</span>
         {{else if item.is_wait_manual}}
         <span class="badge badge-dark" data-toggle="tooltip" title="等待手动受理">{{value}}</span>
         {{else}}
