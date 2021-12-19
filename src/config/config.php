@@ -25,18 +25,25 @@ return [
     // 退款订单号前缀
     'refund_no_prefix' => 1002,
     
-    // 任务配置
-    'task'             => [
-        // 退款任务
-        'refund' => [
-            // 是否启用
-            'enable'          => false,
-            
-            // 下单任务间隔执行毫秒
-            'submit_interval' => 1000,
-            
-            // 查询任务间隔执行毫秒
-            'query_interval'  => 1000
+    // 退款队列配置
+    'refund_queue'     => [
+        // 是否启用
+        'enable'     => false,
+        
+        // 参见 config/queue.php 中的 connections
+        'connection' => [
+            'type'  => 'database',
+            'queue' => 'plugin_trade_refund',
+            'table' => 'system_jobs',
+        ],
+        
+        // 参见 config/swoole.php 中的 queue
+        'worker'     => [
+            'number'  => 1,
+            'delay'   => 3600,
+            'sleep'   => 60,
+            'tries'   => 0,
+            'timeout' => 60,
         ]
     ],
     
