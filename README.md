@@ -15,29 +15,21 @@ composer require busyphp/trade
 
 ## 启动退款任务
 
-`cd` 到到项目根目录下执行
+配置 `config/trade.php` 中的 `refund_queue.enable` 为 `true`
 
-### 启动命令
+> 如果安装了`busyphp/swoole` 请使用swoole命令启动退款任务，参考[https://github.com/busyphp/swoole#readme](https://github.com/busyphp/swoole#readme)
 
+
+`cd` 到项目根目录下执行
+
+> 以下两种命令二选一执行，具体参考 [https://github.com/busyphp/queue#readme](https://github.com/busyphp/queue#readme)
+>
 ```shell script
-php think swoole
+php think queue:listen plugin_trade --queue plugin_trade_refund --delay 3600 --sleep 60 
+
+php think queue:work plugin_trade --queue plugin_trade_refund --delay 3600 --sleep 60 
 ```
 
-### 停止命令
-```shell script
-php think swoole stop
-```
-
-### 重启命令
-```shell script
-php think swoole restart
-```
-
-### 在`www`用户下运行
-
-```shell script
-su -c "php think swoole start|stop|restart" -s /bin/sh www
-```
 
 ## 配置 `config/extend/trade.php`
 
@@ -62,18 +54,33 @@ return [
     // 退款订单号前缀
     'refund_no_prefix' => 1002,
     
-    // 任务配置
-    'task'             => [
-        // 退款任务
-        'refund' => [
-            // 是否启用
-            'enable'          => false,
-            
-            // 下单任务间隔执行毫秒
-            'submit_interval' => 1000,
-            
-            // 查询任务间隔执行毫秒
-            'query_interval'  => 1000
+    // 退款队列配置
+    'refund_queue'     => [
+        // 是否启用
+        'enable'       => false,
+        
+        // 获取需重新退款的任务延迟执行秒数
+        // 优先插件管理设置中的值
+        'submit_delay' => 3600,
+        
+        // 获取需重新查询退款状态的任务延迟查询秒数
+        // 优先插件管理设置中的值
+        'query_delay'  => 3600,
+        
+        // 参见 config/queue.php 中的 connections
+        'connection'   => [
+            'type'  => 'database',
+            'queue' => 'plugin_trade_refund',
+            'table' => 'system_jobs',
+        ],
+        
+        // 参见 config/swoole.php 中的 queue
+        'worker'       => [
+            'number'  => 1,
+            'delay'   => 3600,
+            'sleep'   => 60,
+            'tries'   => 0,
+            'timeout' => 60,
         ]
     ],
     
