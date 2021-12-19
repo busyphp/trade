@@ -6,8 +6,6 @@ use BusyPHP\Service as BaseService;
 use BusyPHP\trade\app\controller\NotifyController;
 use BusyPHP\trade\app\controller\TradeController;
 use BusyPHP\trade\model\TradeConfig;
-use BusyPHP\trade\task\RefundQueryTask;
-use BusyPHP\trade\task\RefundSubmitTask;
 use think\Container;
 use think\Route;
 
@@ -21,7 +19,7 @@ class Service extends \think\Service
 {
     use TradeConfig;
     
-    const URL_NOTIFY_PATH = 'service/plugins/trade/notify/';
+    const URL_NOTIFY_PATH = 'plugins_service/trade/notify/';
     
     
     /**
@@ -37,18 +35,37 @@ class Service extends \think\Service
     public function boot()
     {
         // 注入任务
-        if ($this->getTradeConfig('task.refund.enable', false)) {
-            $swoole                    = $this->app->config->get('swoole', []);
-            $swoole['task']            = $swoole['task'] ?? [];
-            $swoole['task']['workers'] = $swoole['task']['workers'] ?? [];
-            if (!in_array(RefundSubmitTask::class, $swoole['task']['workers'])) {
-                $swoole['task']['workers'][] = RefundSubmitTask::class;
+        if ($this->getTradeConfig('refund_queue.enable', false)) {
+            // 队列配置
+            $queue                = $this->app->config->get('queue', []);
+            $queue['connections'] = $queue['connections'] ?? [];
+            if (!isset($queue['connections']['plugin_trade'])) {
+                $queue['connections']['plugin_trade'] = $this->getTradeConfig('refund.queue.connection', [
+                    'type'  => 'database',
+                    'queue' => 'plugin_trade_refund',
+                    'table' => 'system_jobs',
+                ]);
             }
-            if (!in_array(RefundQueryTask::class, $swoole['task']['workers'])) {
-                $swoole['task']['workers'][] = RefundQueryTask::class;
+            $this->app->config->set($queue, 'queue');
+            
+            
+            // Swoole队列配置
+            $name                       = $this->app->config->get('queue.connections.plugin_trade.queue', 'plugin_trade_refund');
+            $swoole                     = $this->app->config->get('swoole', []);
+            $swoole['queue']            = $swoole['queue'] ?? [];
+            $swoole['queue']['workers'] = $swoole['queue']['workers'] ?? [];
+            if (!isset($swoole['queue']['workers'][$name])) {
+                $swoole['queue']['workers'][$name]               = $this->getTradeConfig('refund_queue.worker', [
+                    'number'  => 1,
+                    'delay'   => 3600,
+                    'sleep'   => 60,
+                    'tries'   => 0,
+                    'timeout' => 60,
+                ]);
+                $swoole['queue']['workers'][$name]['connection'] = 'plugin_trade';
             }
             
-            $swoole['task']['enable'] = true;
+            $swoole['queue']['enable'] = true;
             $this->app->config->set($swoole, 'swoole');
         }
         
