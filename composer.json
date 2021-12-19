@@ -31,7 +31,7 @@
 	"extra"       : {
 		"think"   : {
 			"config" : {
-				"swoole" : "src/config/config.php"
+				"trade" : "src/config/config.php"
 			}
 		},
 		"busyphp" : {
