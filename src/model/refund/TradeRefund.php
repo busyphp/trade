@@ -153,7 +153,7 @@ class TradeRefund extends Model
     {
         // 获取订单号前缀配置
         if (!$refundNoPrefix = $this->getTradeConfig('refund_no_prefix', 1002)) {
-            throw new RuntimeException('未配置退款订单号前缀: refund_no_prefix');
+            throw new RuntimeException('请前往config/trade.php 配置 refund_no_prefix');
         }
         
         $insert = TradeRefundField::init();
