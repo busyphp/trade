@@ -8,6 +8,7 @@ use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
 use BusyPHP\contract\abstracts\PluginManager;
 use BusyPHP\exception\VerifyException;
 use Exception;
+use RuntimeException;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\Response;
@@ -153,6 +154,7 @@ class ManagerController extends PluginManager
                     $menuModel->addMenu('plugins_trade/refund_retry', '重试退款', $refundPath, '', true, 1);
                     $menuModel->addMenu('plugins_trade/refund_success', '设为退款成功', $refundPath, '', true, 2);
                     $menuModel->addMenu('plugins_trade/refund_query', '查询退款结果', $refundPath, '', true, 3);
+                    $menuModel->addMenu('plugins_trade/refund_setting', '退款设置', $refundPath, '', true, 4);
                 }
                 
                 // 不存在交易管理则创建
@@ -161,6 +163,7 @@ class ManagerController extends PluginManager
                     $menuModel->addMenu('plugins_trade/pay_success', '支付订单', $payPath, '', true, 1);
                     $menuModel->addMenu('plugins_trade/pay_order_success', '恢复业务订单', $payPath, '', true, 2);
                     $menuModel->addMenu('plugins_trade/pay_apply_refund', '创建退款单', $payPath, '', true, 3);
+                    $menuModel->addMenu('plugins_trade/pay_setting', '交易设置', $payPath, '', true, 4);
                 }
                 
                 // 删除表
@@ -249,25 +252,9 @@ class ManagerController extends PluginManager
     /**
      * 设置插件
      * @return Response
-     * @throws DataNotFoundException
-     * @throws DbException
      */
     public function setting() : Response
     {
-        if ($this->isPost()) {
-            $data                        = $this->param('data/a');
-            $data['refund_submit_delay'] = intval($data['refund_submit_delay']);
-            $data['refund_query_delay']  = intval($data['refund_query_delay']);
-            
-            SystemPlugin::init()->setSetting($this->info->package, $data);
-            $this->logSetting();
-            
-            return $this->success('设置成功');
-        }
-        
-        $this->assign('info', SystemPlugin::init()->getSetting($this->info->package));
-        $this->setPageTitle('交易中心模块设置');
-        
-        return $this->display();
+        throw new RuntimeException('不支持设置');
     }
 }
