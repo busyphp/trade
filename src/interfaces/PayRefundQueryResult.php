@@ -98,6 +98,7 @@ class PayRefundQueryResult extends ObjectOption
         $item = new PayRefundQueryDetailItem($key, $value);
         $item->setName($name);
         $item->setDesc($desc);
+        $this->addDetailItem($item);
         
         return $this;
     }
