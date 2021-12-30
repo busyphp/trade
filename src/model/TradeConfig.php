@@ -49,7 +49,7 @@ trait TradeConfig
      */
     public function getRefundQueryDelay() : int
     {
-        $delay = $this->getTradeSetting('refund_query_delay', $this->getTradeSetting('refund_queue.query_delay', 3600));
+        $delay = $this->getTradeSetting('refund_query_delay', $this->getTradeConfig('refund_queue.query_delay', 3600));
         
         return FilterHelper::min($delay, 0);
     }
@@ -61,8 +61,20 @@ trait TradeConfig
      */
     public function getRefundSubmitDelay() : int
     {
-        $delay = $this->getTradeSetting('refund_submit_delay', $this->getTradeSetting('refund_queue.submit_delay', 3600));
+        $delay = $this->getTradeSetting('refund_submit_delay', $this->getTradeConfig('refund_queue.submit_delay', 3600));
         
         return FilterHelper::min($delay, 0);
+    }
+    
+    
+    /**
+     * 获取交易订单有效时长秒数
+     * @return int
+     */
+    public function getTradeValidDuration() : int
+    {
+        $duration = $this->getTradeSetting('trade_valid_duration', $this->getTradeConfig('trade_valid_duration', 1800));
+        
+        return FilterHelper::min($duration, 0);
     }
 }
