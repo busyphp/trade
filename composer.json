@@ -48,8 +48,7 @@
 						"type"    : "modal",
 						"success" : "@table.reload|@app.loadInfo"
 					}
-				},
-				"setting" : true
+				}
 			},
 			"services" : [
 				"BusyPHP\\trade\\Service"
