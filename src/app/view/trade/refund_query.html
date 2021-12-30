@@ -19,8 +19,8 @@
                                 <span>{$vo.key}</span>
                             </notempty>
                         </td>
-                        <td class="text-center">{$vo.value}</td>
-                        <td class="text-left">{$vo.desc}</td>
+                        <td class="text-center">{$vo.value|default='--'}</td>
+                        <td class="text-left">{$vo.desc|default='--'}</td>
                     </tr>
                 </foreach>
             </tbody>
