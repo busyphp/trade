@@ -279,12 +279,13 @@ class TradePay extends Model
      * @param int    $userId 会员ID
      * @param int    $payType 支付类型
      * @param string $orderTradeNo 业务订单号
+     * @param float  $debugPrice 调试支付金额
      * @return PayCreate
      * @throws DataNotFoundException
      * @throws DbException
      * @throws Throwable
      */
-    public function pay($userId, int $payType, string $orderTradeNo) : PayCreate
+    public function pay($userId, int $payType, string $orderTradeNo, float $debugPrice = 0.0) : PayCreate
     {
         // 校验支付方式
         $payList = $this->getPayTypes($orderTradeNo);
@@ -317,7 +318,12 @@ class TradePay extends Model
         $data->title        = $payData->getBody();
         
         // 赋值模型
-        $create->setTradeInfo($this->getInfo($this->createOrder($data)));
+        $info = $this->getInfo($this->createOrder($data));
+        if ($debugPrice > 0) {
+            $info->price = $debugPrice;
+        }
+        
+        $create->setTradeInfo($info);
         $create->setNotifyUrl($this->createNotifyUrl($payType)->build());
         
         return $create;
