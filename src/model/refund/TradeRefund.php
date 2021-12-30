@@ -804,7 +804,7 @@ class TradeRefund extends Model
                         // 触发业务订单事件
                         try {
                             $modal = TradePay::init()->getOrderModel($this->refundInfo->orderTradeNo);
-                            $modal->setRefundStatus($this->refundInfo, $tradePayInfo, $this->result->isStatus(), $this->result->isStatus() ? $update->refundAccount : $update->failRemark);
+                            $modal->setRefundStatus($this->refundInfo, $tradePayInfo, $this->result->isStatus(), $this->result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: ''));
                         } catch (Throwable $e) {
                             TradeRefund::log('退款处理完成，但通知业务订单失败', __METHOD__)->error($e);
                         }
