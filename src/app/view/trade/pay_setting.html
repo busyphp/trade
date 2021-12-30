@@ -1,0 +1,11 @@
+<extend name="@admin:layout"/>
+<block name="content">
+    <div class="form-group no-margin-bottom">
+        <label>订单有效期</label>
+        <div class="input-group">
+            <input type="number" class="form-control" name="data[pay_valid_duration]" value="{$info.pay_valid_duration|default='1800'}" placeholder="请输入秒"/>
+            <div class="input-group-addon">秒</div>
+        </div>
+        <div class="help-block no-margin-bottom">设置支付订单的有效时长，过期后会自动取消该订单</div>
+    </div>
+</block>

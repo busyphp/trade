@@ -6,6 +6,7 @@ namespace BusyPHP\trade\app\controller;
 use BusyPHP\app\admin\controller\AdminController;
 use BusyPHP\app\admin\model\admin\group\AdminGroup;
 use BusyPHP\app\admin\model\admin\user\AdminUserInfo;
+use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
 use BusyPHP\app\admin\plugin\table\TableHandler;
 use BusyPHP\app\admin\plugin\TablePlugin;
 use BusyPHP\exception\VerifyException;
@@ -281,6 +282,31 @@ class TradeController extends AdminController
     
     
     /**
+     * 交易设置
+     * @return Response
+     * @throws DataNotFoundException
+     * @throws DbException
+     */
+    public function pay_setting() : Response
+    {
+        $info = SystemPlugin::init()->getSetting('busyphp/trade');
+        if ($this->isPost()) {
+            $data                       = $this->param('data/a');
+            $info['pay_valid_duration'] = intval($data['pay_valid_duration']);
+            
+            SystemPlugin::init()->setSetting('busyphp/trade', $info);
+            $this->log()->record(self::LOG_DEFAULT, '交易设置');
+            
+            return $this->success('设置成功');
+        }
+        
+        $this->assign('info', $info);
+        
+        return $this->display();
+    }
+    
+    
+    /**
      * 退款管理
      * @return Response
      * @throws DataNotFoundException
@@ -482,6 +508,32 @@ class TradeController extends AdminController
             $this->log()->record(self::LOG_UPDATE, '查询退款结果');
         }
         $this->assign('list', $result->getDetail());
+        
+        return $this->display();
+    }
+    
+    
+    /**
+     * 退款设置
+     * @return Response
+     * @throws DataNotFoundException
+     * @throws DbException
+     */
+    public function refund_setting() : Response
+    {
+        $info = SystemPlugin::init()->getSetting('busyphp/trade');
+        if ($this->isPost()) {
+            $data                        = $this->param('data/a');
+            $info['refund_submit_delay'] = intval($data['refund_submit_delay']);
+            $info['refund_query_delay']  = intval($data['refund_query_delay']);
+            
+            SystemPlugin::init()->setSetting('busyphp/trade', $info);
+            $this->log()->record(self::LOG_DEFAULT, '退款设置');
+            
+            return $this->success('设置成功');
+        }
+        
+        $this->assign('info', $info);
         
         return $this->display();
     }
