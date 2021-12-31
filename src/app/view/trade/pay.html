@@ -64,6 +64,9 @@
         <li<?=($_GET['static']['status'] ?? 0) == 3 ? ' class="active"' : ''?>>
             <a href="{:url('?static[status]=3')}">有退款</a>
         </li>
+        <li<?=($_GET['static']['status'] ?? 0) == 4 ? ' class="active"' : ''?>>
+            <a href="{:url('?static[status]=4')}">已失效</a>
+        </li>
     </ul>
 
     <table class="table table-bordered table-striped table-hover"
@@ -120,6 +123,9 @@
                 <th class="text-center" width="150" data-field="<?=TradePayExtendInfo::formatCreateTime();?>" data-sortable="true" data-sort-name="<?=TradePayExtendInfo::createTime()?>" data-formatter="@">
                     创建时间
                 </th>
+                <th class="text-center" width="150" data-field="<?=TradePayExtendInfo::formatInvalidTime();?>" data-sortable="true" data-sort-name="<?=TradePayExtendInfo::invalidTime()?>" data-formatter="@">
+                    失效时间
+                </th>
                 <th class="text-center" width="100" data-field="<?=TradePayExtendInfo::username();?>" data-formatter="@">
                     所属用户
                 </th>
@@ -144,10 +150,14 @@
     </script>
 
     <script type="text/html" id="<?=TradePayExtendInfo::isPay();?>">
-        {{if value}}
-        <span class="badge badge-success">已支付</span>
-        {{else}}
-        <span class="badge badge-default">待支付</span>
+        {{if item.is_invalid}}
+            <span class="badge badge-secondary">已失效</span>
+            {{else}}
+            {{if value}}
+            <span class="badge badge-success">已支付</span>
+            {{else}}
+            <span class="badge badge-default">待支付</span>
+            {{/if}}
         {{/if}}
     </script>
 
@@ -160,6 +170,10 @@
     </script>
 
     <script type="text/html" id="<?=TradePayExtendInfo::formatCreateTime();?>">
+        <span class="text-muted">{{value || '-'}}</span>
+    </script>
+
+    <script type="text/html" id="<?=TradePayExtendInfo::formatInvalidTime();?>">
         <span class="text-muted">{{value || '-'}}</span>
     </script>
 

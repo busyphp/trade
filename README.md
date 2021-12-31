@@ -17,7 +17,7 @@ composer require busyphp/trade
 
 配置 `config/trade.php` 中的 `refund_queue.enable` 为 `true`
 
-> 如果安装了`busyphp/swoole` 请使用swoole命令启动退款任务，参考[https://github.com/busyphp/swoole#readme](https://github.com/busyphp/swoole#readme)
+> 如果安装了`busyphp/swoole` 请使用swoole命令启动任务，参考[https://github.com/busyphp/swoole#readme](https://github.com/busyphp/swoole#readme)
 
 
 `cd` 到项目根目录下执行
@@ -30,11 +30,30 @@ php think queue:listen plugin_trade --queue plugin_trade_refund --delay 3600 --s
 php think queue:work plugin_trade --queue plugin_trade_refund --delay 3600 --sleep 60 
 ```
 
+## 启动交易订单失效任务
+
+配置 `config/trade.php` 中的 `pay_queue.enable` 为 `true`
+
+> 如果安装了`busyphp/swoole` 请使用swoole命令启动任务，参考[https://github.com/busyphp/swoole#readme](https://github.com/busyphp/swoole#readme)
+
+`cd` 到项目根目录下执行
+
+> 以下两种命令二选一执行，具体参考 [https://github.com/busyphp/queue#readme](https://github.com/busyphp/queue#readme)
+>
+```shell script
+php think queue:listen plugin_trade --queue plugin_trade_pay --delay 60 --sleep 60 
+
+php think queue:work plugin_trade --queue plugin_trade_pay --delay 60 --sleep 60 
+```
+
 
 ## 配置 `config/trade.php`
 
 ```php
 <?php
+
+use BusyPHP\trade\Service;
+
 return [
     // 异步通知服务域名，如：www.harter.cn，退款功能必须设置该项
     'host'             => '',
@@ -49,7 +68,30 @@ return [
     'trade_member'     => '',
     
     // 支付订单号前缀
-    'trade_no_prefix'  => 1001,
+    'pay_no_prefix'    => 1001,
+    
+    // 支付订单队列配置
+    'pay_queue'        => [
+        // 是否启用
+        // 不启用则使用同步模式
+        'enable'         => false,
+        
+        // 支付订单有效期(秒) 设为0则不过期
+        // 优先管理设置中的值
+        'valid_duration' => 1800,
+        
+        // 设置队列名称
+        'name'           => Service::DEFAULT_PAY_QUEUE,
+        
+        // 参见 config/swoole.php 中的 queue
+        'worker'         => [
+            'number'  => 1,
+            'delay'   => 0,
+            'sleep'   => 60,
+            'tries'   => 0,
+            'timeout' => 60,
+        ]
+    ],
     
     // 退款订单号前缀
     'refund_no_prefix' => 1002,
@@ -60,19 +102,15 @@ return [
         'enable'       => false,
         
         // 获取需重新退款的任务延迟执行秒数
-        // 优先插件管理设置中的值
+        // 优先管理设置中的值
         'submit_delay' => 3600,
         
         // 获取需重新查询退款状态的任务延迟查询秒数
-        // 优先插件管理设置中的值
+        // 优先管理设置中的值
         'query_delay'  => 3600,
         
-        // 参见 config/queue.php 中的 connections
-        'connection'   => [
-            'type'  => 'database',
-            'queue' => 'plugin_trade_refund',
-            'table' => 'system_jobs',
-        ],
+        // 设置队列名称
+        'name'         => Service::DEFAULT_REFUND_QUEUE,
         
         // 参见 config/swoole.php 中的 queue
         'worker'       => [
@@ -82,6 +120,14 @@ return [
             'tries'   => 0,
             'timeout' => 60,
         ]
+    ],
+    
+    // 队列配置
+    // 参见 config/queue.php 中的 connections
+    'queue_connection' => [
+        'type'  => 'database',
+        'queue' => 'default',
+        'table' => 'system_jobs',
     ],
     
     // 业务订单模型绑定

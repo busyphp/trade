@@ -115,6 +115,10 @@ class TradeController extends AdminController
                             $model->whereEntity(TradePayField::payTime('>', 0));
                             $model->whereEntity(TradePayField::refundAmount('<', TradePayField::apiPrice())->raw(true));
                         break;
+                        case 4:
+                            $model->whereEntity(TradePayField::payTime( 0));
+                            $model->whereEntity(TradePayField::invalidTime('<=', time()));
+                        break;
                     }
                     $data->remove('status');
                     
@@ -291,8 +295,8 @@ class TradeController extends AdminController
     {
         $info = SystemPlugin::init()->getSetting('busyphp/trade');
         if ($this->isPost()) {
-            $data                         = $this->param('data/a');
-            $info['trade_valid_duration'] = intval($data['trade_valid_duration']);
+            $data                       = $this->param('data/a');
+            $info['pay_valid_duration'] = intval($data['pay_valid_duration']);
             
             SystemPlugin::init()->setSetting('busyphp/trade', $info);
             $this->log()->record(self::LOG_DEFAULT, '交易设置');

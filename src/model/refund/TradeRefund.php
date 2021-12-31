@@ -121,7 +121,8 @@ class TradeRefund extends Model
      */
     public function queuePush($job, $id)
     {
-        Queue::connection('plugin_trade')->push($job, $id, 'plugin_trade_refund');
+        Queue::connection(Service::QUEUE_CONNECTION)
+            ->push($job, $id, $this->getTradeConfig('refund_queue.name', Service::DEFAULT_REFUND_QUEUE));
     }
     
     
@@ -133,7 +134,8 @@ class TradeRefund extends Model
      */
     public function queueLater($delay, $job, $id)
     {
-        Queue::connection('plugin_trade')->later($delay, $job, $id, 'plugin_trade_refund');
+        Queue::connection(Service::QUEUE_CONNECTION)
+            ->later($delay, $job, $id, $this->getTradeConfig('refund_queue.name', Service::DEFAULT_REFUND_QUEUE));
     }
     
     

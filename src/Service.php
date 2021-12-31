@@ -19,7 +19,13 @@ class Service extends \think\Service
 {
     use TradeConfig;
     
-    const URL_NOTIFY_PATH = 'plugins_service/trade/notify/';
+    const URL_NOTIFY_PATH      = 'plugins_service/trade/notify/';
+    
+    const QUEUE_CONNECTION     = 'plugin_trade';
+    
+    const DEFAULT_REFUND_QUEUE = 'plugin_trade_refund';
+    
+    const DEFAULT_PAY_QUEUE    = 'plugin_trade_pay';
     
     
     /**
@@ -35,14 +41,16 @@ class Service extends \think\Service
     public function boot()
     {
         // 注入任务
-        if ($this->getTradeConfig('refund_queue.enable', false)) {
+        $refundQueueEnable = $this->getTradeConfig('refund_queue.enable', false);
+        $payQueueEnable    = $this->getTradeConfig('pay_queue.enable', false);
+        if ($refundQueueEnable || $payQueueEnable) {
             // 队列配置
             $queue                = $this->app->config->get('queue', []);
             $queue['connections'] = $queue['connections'] ?? [];
-            if (!isset($queue['connections']['plugin_trade'])) {
-                $queue['connections']['plugin_trade'] = $this->getTradeConfig('refund.queue.connection', [
+            if (!isset($queue['connections'][self::QUEUE_CONNECTION])) {
+                $queue['connections'][self::QUEUE_CONNECTION] = $this->getTradeConfig('queue_connection', [
                     'type'  => 'database',
-                    'queue' => 'plugin_trade_refund',
+                    'queue' => 'default',
                     'table' => 'system_jobs',
                 ]);
             }
@@ -50,22 +58,42 @@ class Service extends \think\Service
             
             
             // Swoole队列配置
-            $name                       = $this->app->config->get('queue.connections.plugin_trade.queue', 'plugin_trade_refund');
             $swoole                     = $this->app->config->get('swoole', []);
             $swoole['queue']            = $swoole['queue'] ?? [];
             $swoole['queue']['workers'] = $swoole['queue']['workers'] ?? [];
-            if (!isset($swoole['queue']['workers'][$name])) {
-                $swoole['queue']['workers'][$name]               = $this->getTradeConfig('refund_queue.worker', [
-                    'number'  => 1,
-                    'delay'   => 3600,
-                    'sleep'   => 60,
-                    'tries'   => 0,
-                    'timeout' => 60,
-                ]);
-                $swoole['queue']['workers'][$name]['connection'] = 'plugin_trade';
+            $swoole['queue']['enable']  = true;
+            
+            // 退款队列
+            if ($refundQueueEnable) {
+                $name = $this->app->config->get('refund_queue.name', self::DEFAULT_REFUND_QUEUE);
+                if (!isset($swoole['queue']['workers'][$name])) {
+                    $swoole['queue']['workers'][$name]               = $this->getTradeConfig('refund_queue.worker', [
+                        'number'  => 1,
+                        'delay'   => 3600,
+                        'sleep'   => 60,
+                        'tries'   => 0,
+                        'timeout' => 60,
+                    ]);
+                    $swoole['queue']['workers'][$name]['tries'] = 0;
+                    $swoole['queue']['workers'][$name]['connection'] = self::QUEUE_CONNECTION;
+                }
             }
             
-            $swoole['queue']['enable'] = true;
+            // 交易队列
+            if ($payQueueEnable) {
+                $name = $this->app->config->get('pay_queue.name', self::DEFAULT_PAY_QUEUE);
+                if (!isset($swoole['queue']['workers'][$name])) {
+                    $swoole['queue']['workers'][$name]               = $this->getTradeConfig('pay_queue.worker', [
+                        'number'  => 1,
+                        'delay'   => 0,
+                        'sleep'   => 60,
+                        'tries'   => 0,
+                        'timeout' => 60,
+                    ]);
+                    $swoole['queue']['workers'][$name]['connection'] = self::QUEUE_CONNECTION;
+                }
+            }
+            
             $this->app->config->set($swoole, 'swoole');
         }
         

@@ -71,10 +71,10 @@ trait TradeConfig
      * 获取交易订单有效时长秒数
      * @return int
      */
-    public function getTradeValidDuration() : int
+    public function getPayValidDuration() : int
     {
-        $duration = $this->getTradeSetting('trade_valid_duration', $this->getTradeConfig('trade_valid_duration', 1800));
+        $duration = $this->getTradeSetting('pay_valid_duration', $this->getTradeConfig('pay_queue.valid_duration', 1800));
         
-        return FilterHelper::min($duration, 0);
+        return FilterHelper::min($duration, 60);
     }
 }

@@ -9,15 +9,18 @@ use BusyPHP\exception\ParamInvalidException;
 use BusyPHP\exception\VerifyException;
 use BusyPHP\helper\LogHelper;
 use BusyPHP\Model;
+use BusyPHP\queue\facade\Queue;
 use BusyPHP\trade\interfaces\PayCreate;
 use BusyPHP\trade\interfaces\PayCreateSyncReturn;
 use BusyPHP\trade\interfaces\PayNotify;
 use BusyPHP\trade\interfaces\PayNotifyResult;
 use BusyPHP\trade\interfaces\PayOrder;
+use BusyPHP\trade\interfaces\PayOrderInvalid;
 use BusyPHP\trade\interfaces\PayOrderPayData;
 use BusyPHP\trade\interfaces\TradeMemberAdminPayOperateAttr;
 use BusyPHP\trade\interfaces\TradeMemberModel;
 use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
+use BusyPHP\trade\job\InvalidJob;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\TradeConfig;
 use BusyPHP\trade\Service;
@@ -121,15 +124,17 @@ class TradePay extends Model
         }
         
         // 获取订单号前缀配置
-        if (!$type = $this->getTradeConfig('trade_no_prefix', 1001)) {
-            throw new RuntimeException('没有配置支付订单号前缀: trade_no_prefix');
+        if (!$type = $this->getTradeConfig('pay_no_prefix', 1001)) {
+            throw new RuntimeException('请前往 config/trade.php 配置 pay_no_prefix');
         }
         
         $this->startTrans($disabledTrans);
         try {
-            $insert->payTradeNo = TradeNo::init()->get($type);
-            $insert->createTime = time();
-            $insert->updateTime = time();
+            $time                = time();
+            $insert->payTradeNo  = TradeNo::init()->get($type);
+            $insert->createTime  = $time;
+            $insert->updateTime  = $time;
+            $insert->invalidTime = $time + $this->getPayValidDuration();
             
             $insertId = $this->addData($insert);
             
@@ -275,6 +280,28 @@ class TradePay extends Model
     
     
     /**
+     * 设置绑定模型为失效
+     * @param int $id
+     * @throws DataNotFoundException
+     * @throws DbException
+     */
+    public function invalidModel($id)
+    {
+        $info = $this->getInfo($id);
+        
+        // 已支付的不在设置
+        if ($info->isPay) {
+            return;
+        }
+        
+        $model = $this->getOrderModel($info->orderTradeNo);
+        if ($model instanceof PayOrderInvalid) {
+            $model->onPayInvalid($info);
+        }
+    }
+    
+    
+    /**
      * 获取支付模型
      * @param int    $userId 会员ID
      * @param int    $payType 支付类型
@@ -325,6 +352,12 @@ class TradePay extends Model
         
         $create->setTradeInfo($info);
         $create->setNotifyUrl($this->createNotifyUrl($payType)->build());
+        
+        // 发布失效任务
+        if ($this->getTradeConfig('pay_queue.enable', false)) {
+            Queue::connection(Service::QUEUE_CONNECTION)
+                ->later($this->getPayValidDuration(), InvalidJob::class, $info->id, $this->getTradeConfig('pay_queue.name', Service::DEFAULT_PAY_QUEUE));
+        }
         
         return $create;
     }

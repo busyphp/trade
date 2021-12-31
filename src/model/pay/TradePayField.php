@@ -30,6 +30,7 @@ use BusyPHP\model\Field;
  * @method static Entity payType($op = null, $value = null) 支付类型
  * @method static Entity refundAmount($op = null, $value = null) 剩余可退款金额
  * @method static Entity ticketStatus($op = null, $value = null) 开票状态
+ * @method static Entity invalidTime($op = null, $value = null) 失效时间
  */
 class TradePayField extends Field
 {
@@ -145,4 +146,10 @@ class TradePayField extends Field
      * @var int
      */
     public $ticketStatus;
+    
+    /**
+     * 失效时间
+     * @var int
+     */
+    public $invalidTime;
 }

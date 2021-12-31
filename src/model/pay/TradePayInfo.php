@@ -13,6 +13,7 @@ use BusyPHP\model\Entity;
  * @version $Id: 2021/10/22 下午下午4:10 TradePayInfo.php $
  * @method static Entity formatCreateTime() 格式化的订单创建时间
  * @method static Entity formatPayTime() 格式化的支付时间
+ * @method static Entity formatInvalidTime() 格式化的失效时间
  * @method static Entity isPay() 是否支付
  * @method static Entity orderSuccess() 订单是否操作成功
  * @method static Entity orderFail() 订单是否操作失败
@@ -29,6 +30,7 @@ use BusyPHP\model\Entity;
  * @method static Entity canOrderSuccess() 是否可以恢复业务订单
  * @method static Entity canRefund() 是否可以退款
  * @method static Entity canPaySuccess() 是否可以设为支付成功
+ * @method static Entity isInvalid() 是否已失效
  */
 class TradePayInfo extends TradePayField
 {
@@ -43,6 +45,12 @@ class TradePayInfo extends TradePayField
      * @var string
      */
     public $formatPayTime;
+    
+    /**
+     * 格式化的失效时间
+     * @var string
+     */
+    public $formatInvalidTime;
     
     /**
      * 是否支付
@@ -141,6 +149,12 @@ class TradePayInfo extends TradePayField
     public $canPaySuccess;
     
     /**
+     * 是否已失效
+     * @var bool
+     */
+    public $isInvalid;
+    
+    /**
      * @var array
      */
     protected static $_ticketStatusList;
@@ -168,10 +182,12 @@ class TradePayInfo extends TradePayField
             static::$_otherPayTypes = TradePay::getOtherPayTypes();
         }
         
-        $this->formatCreateTime = TransHelper::date($this->createTime);
-        $this->formatPayTime    = $this->payTime ? TransHelper::date($this->payTime) : '';
-        $this->payType          = (int) $this->payType;
-        $this->isPay            = $this->payTime > 0;
+        $this->formatCreateTime  = TransHelper::date($this->createTime);
+        $this->formatPayTime     = $this->payTime ? TransHelper::date($this->payTime) : '';
+        $this->formatInvalidTime = $this->invalidTime ? TransHelper::date($this->invalidTime) : '';
+        $this->payType           = (int) $this->payType;
+        $this->isPay             = $this->payTime > 0;
+        $this->isInvalid         = !$this->isPay && $this->invalidTime <= time();
         
         // 状态
         $this->orderStatus  = (int) $this->orderStatus;
@@ -216,6 +232,6 @@ class TradePayInfo extends TradePayField
         
         $this->canRefund       = $this->isPay && $this->refundAmount > 0;
         $this->canOrderSuccess = $this->isPay && $this->orderFail;
-        $this->canPaySuccess   = !$this->isPay;
+        $this->canPaySuccess   = !$this->isPay && !$this->isInvalid;
     }
 }
