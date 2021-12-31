@@ -46,6 +46,7 @@ class ManagerController extends PluginManager
     `pay_type` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '支付类型',
     `refund_amount` DECIMAL(10,2) NOT NULL DEFAULT '0.00' COMMENT '剩余可退款金额',
     `ticket_status` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '开票状态',
+    `invalid_time` INT(11) NOT NULL DEFAULT '0' COMMENT '失效时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `pay_trade_no` (`pay_trade_no`) USING BTREE,
     KEY `order_trade_no` (`order_trade_no`),
@@ -57,6 +58,7 @@ class ManagerController extends PluginManager
     KEY `refund_amount` (`refund_amount`),
     KEY `pay_type` (`pay_type`),
     KEY `pay_time` (`pay_time`),
+    KEY `invalid_time` (`invalid_time`),
     KEY `api_trade_no` (`api_trade_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易支付表'",
         
