@@ -15,11 +15,11 @@ use BusyPHP\trade\interfaces\PayCreateSyncReturn;
 use BusyPHP\trade\interfaces\PayNotify;
 use BusyPHP\trade\interfaces\PayNotifyResult;
 use BusyPHP\trade\interfaces\PayOrder;
+use BusyPHP\trade\interfaces\PayOrderAfter;
 use BusyPHP\trade\interfaces\PayOrderInvalid;
 use BusyPHP\trade\interfaces\PayOrderPayData;
 use BusyPHP\trade\interfaces\TradeMemberAdminPayOperateAttr;
 use BusyPHP\trade\interfaces\TradeMemberModel;
-use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
 use BusyPHP\trade\job\InvalidJob;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\TradeConfig;
@@ -213,7 +213,7 @@ class TradePay extends Model
      * 通过订单号获取支付需要的数据
      * @param string $orderTradeNo
      * @return PayOrderPayData
-     * @throws DbException
+     * @throws Throwable
      */
     public function getPayData(string $orderTradeNo) : PayOrderPayData
     {
@@ -250,9 +250,9 @@ class TradePay extends Model
     /**
      * 通过业务订单号获取订单模型
      * @param string $orderTradeNo 业务订单号
-     * @return PayOrder
+     * @return PayOrder|PayOrderInvalid|PayOrderAfter
      */
-    public function getOrderModel(string $orderTradeNo) : PayOrder
+    public function getOrderModel(string $orderTradeNo)
     {
         if (!$orderTradeNo) {
             throw new ParamInvalidException('order_trade_no');
@@ -488,14 +488,14 @@ class TradePay extends Model
     {
         $this->startTrans();
         try {
-            $info = $this->lock(true)->getInfo($id);
+            $info       = $this->lock(true)->getInfo($id);
+            $orderModel = $this->getOrderModel($info->orderTradeNo);
             if (!$info->orderFail) {
                 throw new LogicException('订单状态异常');
             }
             
             try {
-                $model = $this->getOrderModel($info->orderTradeNo);
-                if ($model->setPaySuccess($info)) {
+                if ($orderModel->setPaySuccess($info)) {
                     $orderStatus       = self::ORDER_STATUS_SUCCESS;
                     $orderStatusRemark = '';
                 } else {
@@ -522,6 +522,15 @@ class TradePay extends Model
             
             throw $e;
         }
+        
+        // 触发模型支付成功后置操作
+        if ($orderModel instanceof PayOrderAfter) {
+            try {
+                $orderModel->setPaySuccessAfter($info);
+            } catch (Throwable $e) {
+                self::log("触发模型支付成功后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")->error($e);
+            }
+        }
     }
     
     
@@ -536,14 +545,16 @@ class TradePay extends Model
     public function setPaySuccess(PayNotifyResult $result, bool $checkPay = false, bool $disabledTrans = false) : bool
     {
         $payTradeNo = $result->getPayTradeNo();
+        $info       = $this->getInfoByPayTradeNo($payTradeNo);
         
         // 设为支付成功
         $this->startTrans($disabledTrans);
         try {
+            $info       = $this->lock(true)->getInfo($info->id);
+            $orderModel = $this->getOrderModel($info->orderTradeNo);
+            $return     = true;
+            
             // 检测是否支付过
-            $info   = $this->getInfoByPayTradeNo($payTradeNo);
-            $info   = $this->lock(true)->getInfo($info->id);
-            $return = true;
             if ($info->isPay) {
                 $return = false;
                 goto commit;
@@ -559,8 +570,7 @@ class TradePay extends Model
             
             // 获取订单模型将订单设为支付成功
             try {
-                $modal = $this->getOrderModel($info->orderTradeNo);
-                if ($modal->setPaySuccess($info)) {
+                if ($orderModel->setPaySuccess($info)) {
                     $orderStatus       = self::ORDER_STATUS_SUCCESS;
                     $orderStatusRemark = '';
                 } else {
@@ -588,13 +598,22 @@ class TradePay extends Model
             
             commit:
             $this->commit($disabledTrans);
-            
-            return $return;
         } catch (Throwable $e) {
             $this->rollback($disabledTrans);
             
             throw $e;
         }
+        
+        // 触发模型支付成功后置操作
+        if ($return && $orderModel instanceof PayOrderAfter) {
+            try {
+                $orderModel->setPaySuccessAfter($info);
+            } catch (Throwable $e) {
+                self::log("触发模型支付成功后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")->error($e);
+            }
+        }
+        
+        return $return;
     }
     
     
@@ -639,7 +658,7 @@ class TradePay extends Model
         $nicknameKey = $userParams->getNicknameField() ? (string) $userParams->getNicknameField() : '';
         $emailKey    = $userParams->getEmailField() ? (string) $userParams->getEmailField() : '';
         $callback    = $userParams->getAdminPayOperateUserAttr();
-        foreach ($list as $i => $item) {
+        foreach ($list as $item) {
             $item->user = $userList[$item->userId] ?? null;
             
             $item->username = $item->user[$usernameKey] ?? '';
@@ -806,41 +825,12 @@ class TradePay extends Model
     
     /**
      * 更新剩余可退金额
-     * @param string                                   $orderTradeNo 业务订单号或订单ID
-     * @param TradeUpdateRefundAmountInterface|Closure $callback 回调方法
-     * @throws Throwable
-     */
-    public function updateRefundAmountByCallback(string $orderTradeNo, $callback)
-    {
-        // 先查出数据，防止锁表
-        $info = $this->getPayInfoByOrderTradeNo($orderTradeNo);
-        
-        // 锁定但行数据
-        $info = $this->lock(true)->getInfo($info->id);
-        
-        if ($callback instanceof TradeUpdateRefundAmountInterface) {
-            $amount = $callback->onUpdate($info);
-        } else {
-            $amount = call_user_func_array($callback, [$info]);
-        }
-        
-        // null 或 0 则不更新
-        if (is_null($amount) || $amount === 0) {
-            return;
-        }
-        
-        $this->updateRefundAmount($info->id, $amount);
-    }
-    
-    
-    /**
-     * 更新剩余可退金额
      * @param int   $id 订单ID
      * @param float $amount 减少或增加的金额
      * @return int
      * @throws DbException
      */
-    protected function updateRefundAmount($id, float $amount) : int
+    public function updateRefundAmount($id, float $amount) : int
     {
         if ($amount < 0) {
             return $this->whereEntity(TradePayField::id($id))->setDec(TradePayField::refundAmount(), abs($amount));

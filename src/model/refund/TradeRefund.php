@@ -11,24 +11,24 @@ use BusyPHP\exception\VerifyException;
 use BusyPHP\helper\LogHelper;
 use BusyPHP\Model;
 use BusyPHP\queue\facade\Queue;
+use BusyPHP\trade\interfaces\PayOrderAfter;
 use BusyPHP\trade\interfaces\PayRefund;
 use BusyPHP\trade\interfaces\PayRefundNotify;
 use BusyPHP\trade\interfaces\PayRefundNotifyResult;
 use BusyPHP\trade\interfaces\PayRefundQuery;
 use BusyPHP\trade\interfaces\PayRefundQueryResult;
 use BusyPHP\trade\interfaces\TradeMemberAdminRefundOperateAttr;
-use BusyPHP\trade\interfaces\TradeUpdateRefundAmountInterface;
 use BusyPHP\trade\job\QueryJob;
 use BusyPHP\trade\job\RefundJob;
 use BusyPHP\trade\model\no\TradeNo;
 use BusyPHP\trade\model\pay\TradePay;
-use BusyPHP\trade\model\pay\TradePayInfo;
 use BusyPHP\trade\model\TradeConfig;
 use BusyPHP\trade\Service;
 use Closure;
 use DomainException;
 use LogicException;
 use RuntimeException;
+use think\Container;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\exception\HttpException;
@@ -60,6 +60,9 @@ class TradeRefund extends Model
     // +----------------------------------------------------
     /** @var int 等待退款 */
     const REFUND_STATUS_WAIT = 0;
+    
+    /** @var int 退款下单中 */
+    const REFUND_STATUS_SUBMIT_PENDING = 2;
     
     /** @var int 退款中 */
     const REFUND_STATUS_PENDING = 1;
@@ -147,140 +150,71 @@ class TradeRefund extends Model
      * @param string $refundRemark 退款原因
      * @param float  $price 退款金额，传0则全退
      * @param bool   $mustRefund 是否强制退款剩余金额
-     * @return TradeRefundField
+     * @return TradeRefundInfo
      * @throws ParamInvalidException
      * @throws Throwable
      */
-    public function joinRefund(string $orderTradeNo, int $orderType = 0, string $orderValue = '', string $refundRemark = '', float $price = 0, bool $mustRefund = false) : TradeRefundField
+    public function joinRefund(string $orderTradeNo, int $orderType = 0, string $orderValue = '', string $refundRemark = '', float $price = 0, bool $mustRefund = false) : TradeRefundInfo
     {
-        $insert = TradeRefundField::init();
-        TradePay::init()
-            ->updateRefundAmountByCallback($orderTradeNo, new class($orderTradeNo, $orderType, $orderValue, $refundRemark, $price, $mustRefund, $insert, $this) implements TradeUpdateRefundAmountInterface {
-                /**
-                 * 业务订单号
-                 * @var string
-                 */
-                private $orderTradeNo;
-                
-                /**
-                 * 业务类型
-                 * @var int
-                 */
-                private $orderType;
-                
-                /**
-                 * 业务参数
-                 * @var string
-                 */
-                private $orderValue;
-                
-                /**
-                 * 退款说明
-                 * @var string
-                 */
-                private $refundRemark;
-                
-                /**
-                 * 退款金额
-                 * @var float
-                 */
-                private $price;
-                
-                /**
-                 * 剩余金额不足，是否强制退掉剩余金额
-                 * @var bool
-                 */
-                private $mustRefund;
-                
-                /**
-                 * @var TradeRefundField
-                 */
-                private $insert;
-                
-                /**
-                 * @var TradeRefund
-                 */
-                private $refundTarget;
-                
-                
-                public function __construct(string $orderTradeNo, int $orderType, string $orderValue, string $refundRemark, float $price, bool $mustRefund, TradeRefundField $insert, TradeRefund $refundTarget)
-                {
-                    $this->orderTradeNo = $orderTradeNo;
-                    $this->orderType    = $orderType;
-                    $this->orderValue   = $orderValue;
-                    $this->refundRemark = $refundRemark;
-                    $this->price        = $price;
-                    $this->mustRefund   = $mustRefund;
-                    $this->insert       = $insert;
-                    $this->refundTarget = $refundTarget;
-                }
-                
-                
-                /**
-                 * 执行更新，内部无需启动事物
-                 * @param TradePayInfo $tradePayInfo
-                 * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                 * @throws Throwable
-                 */
-                public function onUpdate(TradePayInfo $tradePayInfo) : ?float
-                {
-                    // 获取订单号前缀
-                    if (!$refundNoPrefix = $this->refundTarget->getTradeConfig('refund_no_prefix', 1002)) {
-                        throw new RuntimeException('请前往config/busy-trade.php 配置 refund_no_prefix');
-                    }
-                    
-                    // 传入的退款金额为0，则取实际支付金额
-                    if ($this->price <= 0) {
-                        $this->price = $tradePayInfo->apiPrice;
-                    }
-                    
-                    // 传入的退款金额 大于 剩余可退金额
-                    if ($this->price > $tradePayInfo->refundAmount) {
-                        // 强制退款剩余可退金额
-                        if ($this->mustRefund) {
-                            $this->price = $tradePayInfo->refundAmount;
-                        } else {
-                            throw new VerifyException("剩余可退金额为{$tradePayInfo->refundAmount},不足本次退款", 'refund_amount_not_enough');
-                        }
-                    }
-                    
-                    if ($this->price <= 0) {
-                        throw new VerifyException("退款金额为0，无法退款", 'refund_amount_empty');
-                    }
-                    
-                    // 统计累计退款金额是否大于实际支付金额
-                    $totalAmount = $this->refundTarget->whereEntity(TradeRefundField::payId($tradePayInfo->id))
-                        ->whereEntity(TradeRefundField::status('<>', TradeRefund::REFUND_STATUS_FAIL))
-                        ->sum(TradeRefundField::refundPrice());
-                    if ($totalAmount + $this->price > $tradePayInfo->apiPrice) {
-                        throw new VerifyException('订单累计退款金额超出实际支付金额', 'refund_overstep');
-                    }
-                    
-                    // 创建退款订单
-                    $this->insert->userId        = $tradePayInfo->userId;
-                    $this->insert->refundNo      = TradeNo::init()->get($refundNoPrefix);
-                    $this->insert->payId         = $tradePayInfo->id;
-                    $this->insert->payTradeNo    = $tradePayInfo->payTradeNo;
-                    $this->insert->payApiTradeNo = $tradePayInfo->apiTradeNo;
-                    $this->insert->payPrice      = $tradePayInfo->apiPrice;
-                    $this->insert->payType       = $tradePayInfo->payType;
-                    $this->insert->orderTradeNo  = $tradePayInfo->orderTradeNo;
-                    $this->insert->orderType     = $this->orderType;
-                    $this->insert->orderValue    = $this->orderValue;
-                    $this->insert->refundPrice   = $this->price;
-                    $this->insert->createTime    = time();
-                    $this->insert->status        = TradePay::checkPayTypeIsManual($tradePayInfo->payType) ? TradeRefund::REFUND_STATUS_WAIT_MANUAL : TradeRefund::REFUND_STATUS_WAIT;
-                    $this->insert->remark        = $this->refundRemark;
-                    $this->insert->id            = $this->refundTarget->addData($this->insert);
-                    
-                    // 发布退款任务到队列中
-                    $this->refundTarget->queuePush(RefundJob::class, $this->insert->id);
-                    
-                    return 0 - $this->price;
-                }
-            });
+        // 获取订单号前缀
+        if (!$refundNoPrefix = $this->getTradeConfig('refund_no_prefix', 1002)) {
+            throw new RuntimeException('请前往config/busy-trade.php 配置 refund_no_prefix');
+        }
         
-        return $insert;
+        // 传入的退款金额为0，则取实际支付金额
+        $tradePayModel = TradePay::init();
+        $payInfo       = $tradePayModel->getPayInfoByOrderTradeNo($orderTradeNo);
+        if ($price <= 0) {
+            $price = $payInfo->apiPrice;
+        }
+        
+        // 传入的退款金额 大于 剩余可退金额
+        if ($price > $payInfo->refundAmount) {
+            // 强制退款剩余可退金额
+            if ($mustRefund) {
+                $price = $payInfo->refundAmount;
+            } else {
+                throw new VerifyException("剩余可退金额为{$payInfo->refundAmount},不足本次退款", 'refund_amount_not_enough');
+            }
+        }
+        
+        if ($price <= 0) {
+            throw new VerifyException("退款金额为0，无法退款", 'refund_amount_empty');
+        }
+        
+        // 统计累计退款金额是否大于实际支付金额
+        $totalAmount = $this->whereEntity(TradeRefundField::payId($payInfo->id))
+            ->whereEntity(TradeRefundField::status('<>', TradeRefund::REFUND_STATUS_FAIL))
+            ->sum(TradeRefundField::refundPrice());
+        if ($totalAmount + $price > $payInfo->apiPrice) {
+            throw new VerifyException('订单累计退款金额超出实际支付金额', 'refund_overstep');
+        }
+        
+        $insert = TradeRefundField::init();
+        // 创建退款订单
+        $insert->userId        = $payInfo->userId;
+        $insert->refundNo      = TradeNo::init()->get($refundNoPrefix);
+        $insert->payId         = $payInfo->id;
+        $insert->payTradeNo    = $payInfo->payTradeNo;
+        $insert->payApiTradeNo = $payInfo->apiTradeNo;
+        $insert->payPrice      = $payInfo->apiPrice;
+        $insert->payType       = $payInfo->payType;
+        $insert->orderTradeNo  = $payInfo->orderTradeNo;
+        $insert->orderType     = $orderType;
+        $insert->orderValue    = $orderValue;
+        $insert->refundPrice   = $price;
+        $insert->createTime    = time();
+        $insert->status        = TradePay::checkPayTypeIsManual($payInfo->payType) ? TradeRefund::REFUND_STATUS_WAIT_MANUAL : TradeRefund::REFUND_STATUS_WAIT;
+        $insert->remark        = $refundRemark;
+        $insert->id            = $this->addData($insert);
+        
+        // 发布退款任务到队列中
+        $this->queuePush(RefundJob::class, $insert->id);
+        
+        // 扣除可退款金额
+        $tradePayModel->updateRefundAmount($payInfo->id, 0 - $price);
+        
+        return $this->getInfo($insert->id);
     }
     
     
@@ -381,6 +315,9 @@ class TradeRefund extends Model
      */
     public function refund($id)
     {
+        // 设为退款下单中
+        // 防止三方退款请求超时导致数据库锁超时
+        // 同时防止并发抢单
         $this->startTrans();
         try {
             $info = $this->lock(true)->getInfo($id);
@@ -388,107 +325,86 @@ class TradeRefund extends Model
                 throw new LogicException("当前订单状为{$info->statusName}，无法执行退款");
             }
             
-            $payType           = $info->payType;
-            $update            = TradeRefundField::init();
-            $update->startTime = time();
+            $this->whereEntity(TradeRefundField::id($info->id))
+                ->setField(TradeRefundField::status(), self::REFUND_STATUS_SUBMIT_PENDING);
             
-            try {
-                // 实例化三方退款类
-                $class = $this->getTradeConfig("apis.{$payType}.refund", '');
-                if (!$class || !class_exists($class)) {
-                    throw new ClassNotFoundException($class, "该支付方式[ {$payType} ]未绑定退款下单接口");
-                }
-                
-                $api = new $class();
-                if (!$api instanceof PayRefund) {
-                    throw new ClassNotImplementsException($api, PayRefund::class, "退款下单类");
-                }
-                
-                // 执行三方退款
-                $api->setTradeRefundInfo($info);
-                $api->setNotifyUrl($this->createNotifyUrl($payType)->build());
-                $result = $api->refund();
-                
-                // 需要重新处理
-                if ($result->isNeedRehandle()) {
-                    $update->status = self::REFUND_STATUS_WAIT;
-                }
-                
-                //
-                // 退款申请成功
-                else {
-                    if ($result->getApiRefundNo()) {
-                        $update->apiRefundNo = $result->getApiRefundNo();
-                    }
-                    if ($result->getRefundAccount()) {
-                        $update->refundAccount = $result->getRefundAccount();
-                    }
-                    
-                    // 加入列队
-                    $update->status = self::REFUND_STATUS_PENDING;
-                }
-            } catch (Throwable $e) {
-                // 退款失败
-                $update->status       = self::REFUND_STATUS_FAIL;
-                $update->failRemark   = $e->getMessage();
-                $update->completeTime = time();
+            $this->commit();
+        } catch (Throwable $e) {
+            $this->rollback();
+            
+            throw $e;
+        }
+        
+        // 进入三方下单流程
+        $orderModel        = TradePay::init()->getOrderModel($info->orderTradeNo);
+        $payType           = $info->payType;
+        $update            = TradeRefundField::init();
+        $update->startTime = time();
+        try {
+            // 实例化三方退款类
+            $class = $this->getTradeConfig("apis.{$payType}.refund", '');
+            if (!$class || !class_exists($class)) {
+                throw new ClassNotFoundException($class, "该支付方式[ {$payType} ]未绑定退款下单接口");
             }
             
+            $api = Container::getInstance()->make($class, [], true);
+            if (!$api instanceof PayRefund) {
+                throw new ClassNotImplementsException($api, PayRefund::class, "退款下单类");
+            }
             
-            TradePay::init()
-                ->updateRefundAmountByCallback($info->orderTradeNo, new class($update, $info, $this) implements TradeUpdateRefundAmountInterface {
-                    /**
-                     * @var TradeRefundField
-                     */
-                    private $update;
-                    
-                    /**
-                     * @var TradeRefundInfo
-                     */
-                    private $refundInfo;
-                    
-                    /**
-                     * @var TradeRefund
-                     */
-                    private $refundTarget;
-                    
-                    
-                    public function __construct(TradeRefundField $update, TradeRefundInfo $refundInfo, TradeRefund $refundTarget)
-                    {
-                        $this->update       = $update;
-                        $this->refundInfo   = $refundInfo;
-                        $this->refundTarget = $refundTarget;
-                    }
-                    
-                    
-                    /**
-                     * 执行更新，内部无需启动事物
-                     * @param TradePayInfo $tradePayInfo
-                     * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Throwable
-                     */
-                    public function onUpdate(TradePayInfo $tradePayInfo) : ?float
-                    {
-                        // 更新退款订单
-                        $this->refundTarget->whereEntity(TradeRefundField::id($this->refundInfo->id))
-                            ->saveData($this->update);
-                        
-                        // 退款失败，则还原可退金额
-                        if ($this->update->status == TradeRefund::REFUND_STATUS_FAIL) {
-                            try {
-                                // 触发业务订单状态
-                                $modal = TradePay::init()->getOrderModel($this->refundInfo->orderTradeNo);
-                                $modal->setRefundStatus($this->refundInfo, $tradePayInfo, false, $this->update->failRemark);
-                            } catch (Throwable $e) {
-                                TradeRefund::log("退款失败处理完成，但通知业务订单失败", __METHOD__)->error($e);
-                            }
-                            
-                            return (float) $this->refundInfo->refundPrice;
-                        }
-                        
-                        return 0;
-                    }
-                });
+            // 执行三方退款
+            $api->setTradeRefundInfo($info);
+            $api->setNotifyUrl($this->createNotifyUrl($payType)->build());
+            $result = $api->refund();
+            
+            // 需要重新处理
+            if ($result->isNeedRehandle()) {
+                $update->status = self::REFUND_STATUS_WAIT;
+            }
+            
+            //
+            // 退款申请成功
+            else {
+                if ($result->getApiRefundNo()) {
+                    $update->apiRefundNo = $result->getApiRefundNo();
+                }
+                if ($result->getRefundAccount()) {
+                    $update->refundAccount = $result->getRefundAccount();
+                }
+                
+                // 加入列队
+                $update->status = self::REFUND_STATUS_PENDING;
+            }
+        } catch (Throwable $e) {
+            // 退款失败
+            $update->status       = self::REFUND_STATUS_FAIL;
+            $update->failRemark   = $e->getMessage();
+            $update->completeTime = time();
+        }
+        
+        
+        // 更新退款单状态
+        $this->startTrans();
+        try {
+            $tradePayModel = TradePay::init();
+            $info          = $this->lock(true)->getInfo($info->id);
+            $payInfo       = $tradePayModel->lock(true)->getInfo($info->payId);
+            
+            // 更新退款单状态
+            $this->whereEntity(TradeRefundField::id($info->id))->saveData($update);
+            
+            // 退款失败，则还原可退金额
+            if ($update->status == TradeRefund::REFUND_STATUS_FAIL) {
+                try {
+                    // 触发业务订单状态
+                    $orderModel->setRefundStatus($info, $payInfo, false, $update->failRemark);
+                } catch (Throwable $e) {
+                    TradeRefund::log("退款失败处理完成，但触发模型退款状态失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
+                        ->error($e);
+                }
+                
+                $tradePayModel->updateRefundAmount($payInfo->id, (float) $info->refundPrice);
+            }
             
             // 需要重新处理
             // 重新加入退款队列
@@ -507,6 +423,16 @@ class TradeRefund extends Model
             $this->rollback();
             
             throw $e;
+        }
+        
+        // 触发模型退款状态后置操作
+        if ($update->status == TradeRefund::REFUND_STATUS_FAIL && $orderModel instanceof PayOrderAfter) {
+            try {
+                $orderModel->setRefundStatusAfter($info, $payInfo, false, $update->failRemark);
+            } catch (Throwable $e) {
+                TradeRefund::log("触发模型退款状态后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
+                    ->error($e);
+            }
         }
     }
     
@@ -537,7 +463,7 @@ class TradeRefund extends Model
             }
             
             // 执行查询
-            $api = new $class();
+            $api = Container::getInstance()->make($class, [], true);
             if (!$api instanceof PayRefundQuery) {
                 throw new ClassNotImplementsException($class, PayRefundQuery::class, '退款查询类');
             }
@@ -600,7 +526,7 @@ class TradeRefund extends Model
             }
             
             // 实例化异步处理类
-            $notify = new $class();
+            $notify = Container::getInstance()->make($class, [], true);
             if (!$notify instanceof PayRefundNotify) {
                 throw new ClassNotImplementsException($class, PayRefundNotify::class, '异步处理程序');
             }
@@ -642,51 +568,22 @@ class TradeRefund extends Model
     {
         $this->startTrans();
         try {
-            $info = $this->lock(true)->getInfo($id);
+            $tradePayModel = TradePay::init();
+            $info          = $this->lock(true)->getInfo($id);
+            $payInfo       = $tradePayModel->lock(true)->getInfo($info->payId);
             if (!$info->isFail) {
                 throw new LogicException('当前订单不是退款失败状态，无法重试');
             }
             
-            TradePay::init()
-                ->updateRefundAmountByCallback($info->orderTradeNo, new class($info, $this) implements TradeUpdateRefundAmountInterface {
-                    /**
-                     * @var TradeRefundInfo
-                     */
-                    private $refundInfo;
-                    
-                    /**
-                     * @var TradeRefund
-                     */
-                    private $refundTarget;
-                    
-                    
-                    public function __construct(TradeRefundInfo $refundInfo, TradeRefund $refundTarget)
-                    {
-                        $this->refundInfo   = $refundInfo;
-                        $this->refundTarget = $refundTarget;
-                    }
-                    
-                    
-                    /**
-                     * 执行更新，内部无需启动事物
-                     * @param TradePayInfo $tradePayInfo
-                     * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Throwable
-                     */
-                    public function onUpdate(TradePayInfo $tradePayInfo) : ?float
-                    {
-                        $update         = TradeRefundField::init();
-                        $update->status = TradeRefund::REFUND_STATUS_WAIT;
-                        TradeRefund::init()
-                            ->whereEntity(TradeRefundField::id($this->refundInfo->id))
-                            ->saveData($update);
-                        
-                        // 发布任务到队列中
-                        $this->refundTarget->queuePush(RefundJob::class, $this->refundInfo->id);
-                        
-                        return 0 - $this->refundInfo->refundPrice;
-                    }
-                });
+            // 更新状态
+            $update         = TradeRefundField::init();
+            $update->status = TradeRefund::REFUND_STATUS_WAIT;
+            $this->whereEntity(TradeRefundField::id($info->id))->saveData($update);
+            
+            // 发布任务到队列中
+            $this->queuePush(RefundJob::class, $info->id);
+            
+            $tradePayModel->updateRefundAmount($payInfo->id, 0 - $info->refundPrice);
             
             $this->commit();
         } catch (Throwable $e) {
@@ -703,23 +600,28 @@ class TradeRefund extends Model
      * @param bool                  $must 是否强制将退款失败的订单设为成功
      * @throws Throwable
      */
-    public function setRefundStatus(PayRefundNotifyResult $result, $must = false)
+    public function setRefundStatus(PayRefundNotifyResult $result, bool $must = false)
     {
+        if ($result->getRefundNo()) {
+            $this->whereEntity(TradeRefundField::refundNo($result->getRefundNo()));
+        } elseif ($result->getApiRefundNo()) {
+            $this->whereEntity(TradeRefundField::apiRefundNo($result->getApiRefundNo()));
+        } elseif ($result->getPayTradeNo()) {
+            $this->whereEntity(TradeRefundField::payTradeNo($result->getPayTradeNo()));
+        } elseif ($result->getPayApiTradeNo()) {
+            $this->whereEntity(TradeRefundField::payApiTradeNo($result->getPayApiTradeNo()));
+        } else {
+            throw new DomainException('异步退款返回数据中必须返回refund_no,api_refund_no,pay_trade_no,pay_api_trade_no其中的任意一个值');
+        }
+        
         $this->startTrans();
         try {
-            if ($result->getRefundNo()) {
-                $this->whereEntity(TradeRefundField::refundNo($result->getRefundNo()));
-            } elseif ($result->getApiRefundNo()) {
-                $this->whereEntity(TradeRefundField::apiRefundNo($result->getApiRefundNo()));
-            } elseif ($result->getPayTradeNo()) {
-                $this->whereEntity(TradeRefundField::payTradeNo($result->getPayTradeNo()));
-            } elseif ($result->getPayApiTradeNo()) {
-                $this->whereEntity(TradeRefundField::payApiTradeNo($result->getPayApiTradeNo()));
-            } else {
-                throw new DomainException('异步退款返回数据中必须返回refund_no,api_refund_no,pay_trade_no,pay_api_trade_no其中的任意一个值');
-            }
+            $tradePayModel = TradePay::init();
+            $info          = $this->lock(true)->failException(true)->findInfo();
+            $payInfo       = $tradePayModel->lock(true)->getInfo($info->payId);
+            $orderModel    = TradePay::init()->getOrderModel($info->orderTradeNo);
             
-            $info = $this->lock(true)->failException(true)->findInfo();
+            // 强制将退款失败的订单设为成功
             if ($must) {
                 // 不是失败状态的
                 // 不是等待手动处理的
@@ -736,96 +638,69 @@ class TradeRefund extends Model
                 }
             }
             
+            $update = TradeRefundField::init();
             
-            TradePay::init()
-                ->updateRefundAmountByCallback($info->orderTradeNo, new class($info, $result, $this) implements TradeUpdateRefundAmountInterface {
-                    /**
-                     * @var TradeRefundInfo
-                     */
-                    private $refundInfo;
-                    
-                    /**
-                     * @var PayRefundNotifyResult
-                     */
-                    private $result;
-                    
-                    /**
-                     * @var TradeRefund
-                     */
-                    private $refundTarget;
-                    
-                    
-                    public function __construct(TradeRefundInfo $refundInfo, PayRefundNotifyResult $result, TradeRefund $refundTarget)
-                    {
-                        $this->refundInfo   = $refundInfo;
-                        $this->result       = $result;
-                        $this->refundTarget = $refundTarget;
-                    }
-                    
-                    
-                    /**
-                     * 执行更新，内部无需启动事物
-                     * @param TradePayInfo $tradePayInfo
-                     * @return float 返回要更新的金额，整数为加上，负数为减去，返回null或0则不更新
-                     * @throws Throwable
-                     */
-                    public function onUpdate(TradePayInfo $tradePayInfo) : ?float
-                    {
-                        // 构建参数
-                        $update = TradeRefundField::init();
-                        
-                        // 需要重新处理的
-                        if ($this->result->isNeedReHandle()) {
-                            $update->status = TradeRefund::REFUND_STATUS_PENDING;
-                        } else {
-                            $update->status       = $this->result->isStatus() ? TradeRefund::REFUND_STATUS_SUCCESS : TradeRefund::REFUND_STATUS_FAIL;
-                            $update->completeTime = time();
-                            
-                            if ($this->result->getApiRefundNo()) {
-                                $update->apiRefundNo = $this->result->getApiRefundNo();
-                            }
-                            
-                            if ($this->result->getRefundAccount()) {
-                                $update->refundAccount = $this->result->getRefundAccount();
-                            }
-                            
-                            if ($this->result->getErrMsg()) {
-                                $update->failRemark = $this->result->getErrMsg();
-                            }
-                        }
-                        
-                        $this->refundTarget->whereEntity(TradeRefundField::id($this->refundInfo->id))
-                            ->saveData($update);
-                        
-                        
-                        // 触发业务订单事件
-                        try {
-                            $modal = TradePay::init()->getOrderModel($this->refundInfo->orderTradeNo);
-                            $modal->setRefundStatus($this->refundInfo, $tradePayInfo, $this->result->isStatus(), $this->result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: ''));
-                        } catch (Throwable $e) {
-                            TradeRefund::log('退款处理完成，但通知业务订单失败', __METHOD__)->error($e);
-                        }
-                        
-                        // 需要重新处理的
-                        // 发布查询任务到队列中
-                        if ($update->status == TradeRefund::REFUND_STATUS_PENDING) {
-                            $this->refundTarget->queueLater($this->refundTarget->getRefundQueryDelay(), QueryJob::class, $this->refundInfo->id);
-                        }
-                        
-                        // 退款失败的要还原支付订单可退款金额
-                        if (!$this->result->isStatus()) {
-                            return 0 - $this->refundInfo->refundPrice;
-                        }
-                        
-                        return 0;
-                    }
-                });
+            // 需要重新处理的
+            if ($result->isNeedReHandle()) {
+                $update->status = TradeRefund::REFUND_STATUS_PENDING;
+            } else {
+                $update->status       = $result->isStatus() ? TradeRefund::REFUND_STATUS_SUCCESS : TradeRefund::REFUND_STATUS_FAIL;
+                $update->completeTime = time();
+                if ($result->getApiRefundNo()) {
+                    $update->apiRefundNo = $result->getApiRefundNo();
+                }
+                if ($result->getRefundAccount()) {
+                    $update->refundAccount = $result->getRefundAccount();
+                }
+                if ($result->getErrMsg()) {
+                    $update->failRemark = $result->getErrMsg();
+                }
+            }
+            $this->whereEntity(TradeRefundField::id($info->id))->saveData($update);
+            
+            // 触发业务订单事件
+            try {
+                $orderModel->setRefundStatus(
+                    $info,
+                    $payInfo,
+                    $result->isStatus(),
+                    $result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: ''));
+            } catch (Throwable $e) {
+                TradeRefund::log("退款处理完成，但触发业务模型退款状态失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
+                    ->error($e);
+            }
+            
+            // 需要重新处理的
+            // 发布查询任务到队列中
+            if ($update->status == TradeRefund::REFUND_STATUS_PENDING) {
+                $this->queueLater($this->getRefundQueryDelay(), QueryJob::class, $info->id);
+            } else {
+                // 退款失败的要还原支付订单可退款金额
+                if (!$result->isStatus()) {
+                    $tradePayModel->updateRefundAmount($payInfo->id, 0 - $info->refundPrice);
+                }
+            }
             
             $this->commit();
         } catch (Throwable $e) {
             $this->rollback();
             
             throw $e;
+        }
+        
+        // 触发业务模型退款状态后置操作
+        if ($orderModel instanceof PayOrderAfter) {
+            try {
+                $orderModel->setRefundStatusAfter(
+                    $info,
+                    $payInfo,
+                    $result->isStatus(),
+                    $result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: '')
+                );
+            } catch (Throwable $e) {
+                TradeRefund::log("触发业务模型退款状态后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
+                    ->error($e);
+            }
         }
     }
 }
