@@ -4,7 +4,6 @@ namespace BusyPHP\trade\model;
 
 use BusyPHP\App;
 use BusyPHP\app\admin\model\system\plugin\SystemPlugin;
-use BusyPHP\helper\FilterHelper;
 use Exception;
 
 /**
@@ -21,7 +20,7 @@ trait TradeConfig
      * @param mixed  $default 默认值
      * @return mixed
      */
-    public function getTradeConfig($name, $default = null)
+    public function getTradeConfig(string $name, $default = null)
     {
         return App::getInstance()->config->get('busy-trade' . ($name ? ".{$name}" : ''), $default);
     }
@@ -51,7 +50,7 @@ trait TradeConfig
     {
         $delay = $this->getTradeSetting('refund_query_delay', $this->getTradeConfig('refund_queue.query_delay', 3600));
         
-        return FilterHelper::min($delay, 0);
+        return max($delay, 0);
     }
     
     
@@ -63,7 +62,7 @@ trait TradeConfig
     {
         $delay = $this->getTradeSetting('refund_submit_delay', $this->getTradeConfig('refund_queue.submit_delay', 3600));
         
-        return FilterHelper::min($delay, 0);
+        return max($delay, 0);
     }
     
     
@@ -75,6 +74,6 @@ trait TradeConfig
     {
         $duration = $this->getTradeSetting('pay_valid_duration', $this->getTradeConfig('pay_queue.valid_duration', 1800));
         
-        return FilterHelper::min($duration, 60);
+        return max($duration, 60);
     }
 }
