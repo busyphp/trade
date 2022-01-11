@@ -677,7 +677,7 @@ class TradeRefund extends Model
             } else {
                 // 退款失败的要还原支付订单可退款金额
                 if (!$result->isStatus()) {
-                    $tradePayModel->updateRefundAmount($payInfo->id, 0 - $info->refundPrice);
+                    $tradePayModel->updateRefundAmount($payInfo->id, (float) $info->refundPrice);
                 }
             }
             
