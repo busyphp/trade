@@ -17,8 +17,9 @@ interface PayOrderAfter
     /**
      * 将订单设为支付成功后置操作
      * @param TradePayInfo $tradePayInfo 交易订单数据
+     * @param mixed        $setPaySuccessResult {@see PayOrder::setPaySuccess()} 原样返回内容
      */
-    public function setPaySuccessAfter(TradePayInfo $tradePayInfo);
+    public function setPaySuccessAfter(TradePayInfo $tradePayInfo, $setPaySuccessResult);
     
     
     /**
@@ -27,6 +28,7 @@ interface PayOrderAfter
      * @param TradePayInfo    $tradePayInfo 交易订单数据
      * @param bool            $status 退款状态，true: 退款成功，false: 退款失败
      * @param string          $remark 退款成功失败说明，成功: 退入账户，失败：失败原因
+     * @param mixed           $setStatusResult {@see PayOrder::setRefundStatus()} 原样返回内容
      */
-    public function setRefundStatusAfter(TradeRefundInfo $tradeRefundInfo, TradePayInfo $tradePayInfo, bool $status, string $remark);
+    public function setRefundStatusAfter(TradeRefundInfo $tradeRefundInfo, TradePayInfo $tradePayInfo, bool $status, string $remark, $setStatusResult);
 }

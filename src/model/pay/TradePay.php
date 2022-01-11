@@ -10,6 +10,7 @@ use BusyPHP\exception\VerifyException;
 use BusyPHP\helper\LogHelper;
 use BusyPHP\Model;
 use BusyPHP\queue\facade\Queue;
+use BusyPHP\trade\exception\PaidException;
 use BusyPHP\trade\interfaces\PayCreate;
 use BusyPHP\trade\interfaces\PayCreateSyncReturn;
 use BusyPHP\trade\interfaces\PayNotify;
@@ -486,6 +487,8 @@ class TradePay extends Model
      */
     public function setOrderSuccess($id)
     {
+        $triggerStatus = false;
+        $triggerResult = null;
         $this->startTrans();
         try {
             $info       = $this->lock(true)->getInfo($id);
@@ -495,14 +498,12 @@ class TradePay extends Model
             }
             
             try {
-                if ($orderModel->setPaySuccess($info)) {
-                    $orderStatus       = self::ORDER_STATUS_SUCCESS;
-                    $orderStatusRemark = '';
-                } else {
-                    throw new VerifyException('重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录', 'paid');
-                }
+                $triggerResult     = $orderModel->setPaySuccess($info);
+                $orderStatus       = self::ORDER_STATUS_SUCCESS;
+                $orderStatusRemark = '';
+                $triggerStatus     = true;
             } catch (Throwable $e) {
-                if ($e instanceof VerifyException && $e->getField() === 'paid') {
+                if ($e instanceof PaidException) {
                     throw $e;
                 }
                 
@@ -524,9 +525,9 @@ class TradePay extends Model
         }
         
         // 触发模型支付成功后置操作
-        if ($orderModel instanceof PayOrderAfter) {
+        if ($orderModel instanceof PayOrderAfter && $triggerStatus) {
             try {
-                $orderModel->setPaySuccessAfter($info);
+                $orderModel->setPaySuccessAfter($info, $triggerResult);
             } catch (Throwable $e) {
                 self::log("触发模型支付成功后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")->error($e);
             }
@@ -544,8 +545,10 @@ class TradePay extends Model
      */
     public function setPaySuccess(PayNotifyResult $result, bool $checkPay = false, bool $disabledTrans = false) : bool
     {
-        $payTradeNo = $result->getPayTradeNo();
-        $info       = $this->getInfoByPayTradeNo($payTradeNo);
+        $payTradeNo    = $result->getPayTradeNo();
+        $info          = $this->getInfoByPayTradeNo($payTradeNo);
+        $triggerStatus = false;
+        $triggerResult = null;
         
         // 设为支付成功
         $this->startTrans($disabledTrans);
@@ -570,16 +573,17 @@ class TradePay extends Model
             
             // 获取订单模型将订单设为支付成功
             try {
-                if ($orderModel->setPaySuccess($info)) {
-                    $orderStatus       = self::ORDER_STATUS_SUCCESS;
-                    $orderStatusRemark = '';
-                } else {
-                    $orderStatus       = self::ORDER_STATUS_FAIL;
-                    $orderStatusRemark = '重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录';
-                }
+                $triggerResult     = $orderModel->setPaySuccess($info);
+                $orderStatus       = self::ORDER_STATUS_SUCCESS;
+                $orderStatusRemark = '';
+                $triggerStatus     = true;
             } catch (Throwable $e) {
-                $orderStatus       = self::ORDER_STATUS_FAIL;
-                $orderStatusRemark = $e->getMessage();
+                $orderStatus = self::ORDER_STATUS_FAIL;
+                if ($e instanceof PaidException) {
+                    $orderStatusRemark = '重复支付，该业务订单已被支付，请检查与该业务订单相关的支付记录';
+                } else {
+                    $orderStatusRemark = $e->getMessage();
+                }
             }
             
             
@@ -605,9 +609,9 @@ class TradePay extends Model
         }
         
         // 触发模型支付成功后置操作
-        if ($return && $orderModel instanceof PayOrderAfter) {
+        if ($triggerStatus && $orderModel instanceof PayOrderAfter) {
             try {
-                $orderModel->setPaySuccessAfter($info);
+                $orderModel->setPaySuccessAfter($info, $triggerResult);
             } catch (Throwable $e) {
                 self::log("触发模型支付成功后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")->error($e);
             }

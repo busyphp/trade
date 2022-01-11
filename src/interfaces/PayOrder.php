@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace BusyPHP\trade\interfaces;
 
+use BusyPHP\trade\exception\PaidException;
 use BusyPHP\trade\model\pay\TradePayInfo;
 use BusyPHP\trade\model\refund\TradeRefundInfo;
 
@@ -25,9 +26,10 @@ interface PayOrder
     /**
      * 将订单设为支付成功，内部不要启用事物
      * @param TradePayInfo $tradePayInfo 交易订单数据
-     * @return bool false: 已支付，true: 支付成功
+     * @return mixed 返回内容可以原样传递到 {@see PayOrderAfter::setPaySuccessAfter()} 中
+     * @throws PaidException 如果订单已支付，可以抛出该异常
      */
-    public function setPaySuccess(TradePayInfo $tradePayInfo) : bool;
+    public function setPaySuccess(TradePayInfo $tradePayInfo);
     
     
     /**
@@ -36,6 +38,7 @@ interface PayOrder
      * @param TradePayInfo    $tradePayInfo 交易订单数据
      * @param bool            $status 退款状态，true: 退款成功，false: 退款失败
      * @param string          $remark 退款成功失败说明，成功: 退入账户，失败：失败原因
+     * @return mixed 返回内容可以原样传递到 {@see PayOrderAfter::setRefundStatusAfter()} 中
      */
     public function setRefundStatus(TradeRefundInfo $tradeRefundInfo, TradePayInfo $tradePayInfo, bool $status, string $remark);
 }

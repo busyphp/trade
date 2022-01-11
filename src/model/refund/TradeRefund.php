@@ -384,6 +384,8 @@ class TradeRefund extends Model
         
         
         // 更新退款单状态
+        $triggerStatus = false;
+        $triggerResult = null;
         $this->startTrans();
         try {
             $tradePayModel = TradePay::init();
@@ -397,7 +399,8 @@ class TradeRefund extends Model
             if ($update->status == TradeRefund::REFUND_STATUS_FAIL) {
                 try {
                     // 触发业务订单状态
-                    $orderModel->setRefundStatus($info, $payInfo, false, $update->failRemark);
+                    $triggerResult = $orderModel->setRefundStatus($info, $payInfo, false, $update->failRemark);
+                    $triggerStatus = true;
                 } catch (Throwable $e) {
                     TradeRefund::log("退款失败处理完成，但触发模型退款状态失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
                         ->error($e);
@@ -426,9 +429,15 @@ class TradeRefund extends Model
         }
         
         // 触发模型退款状态后置操作
-        if ($update->status == TradeRefund::REFUND_STATUS_FAIL && $orderModel instanceof PayOrderAfter) {
+        if ($triggerStatus && $update->status == TradeRefund::REFUND_STATUS_FAIL && $orderModel instanceof PayOrderAfter) {
             try {
-                $orderModel->setRefundStatusAfter($info, $payInfo, false, $update->failRemark);
+                $orderModel->setRefundStatusAfter(
+                    $info,
+                    $payInfo,
+                    false,
+                    $update->failRemark,
+                    $triggerResult
+                );
             } catch (Throwable $e) {
                 TradeRefund::log("触发模型退款状态后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
                     ->error($e);
@@ -614,6 +623,8 @@ class TradeRefund extends Model
             throw new DomainException('异步退款返回数据中必须返回refund_no,api_refund_no,pay_trade_no,pay_api_trade_no其中的任意一个值');
         }
         
+        $triggerStatus = false;
+        $triggerResult = null;
         $this->startTrans();
         try {
             $tradePayModel = TradePay::init();
@@ -660,11 +671,12 @@ class TradeRefund extends Model
             
             // 触发业务订单事件
             try {
-                $orderModel->setRefundStatus(
+                $triggerResult = $orderModel->setRefundStatus(
                     $info,
                     $payInfo,
                     $result->isStatus(),
                     $result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: ''));
+                $triggerStatus = true;
             } catch (Throwable $e) {
                 TradeRefund::log("退款处理完成，但触发业务模型退款状态失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
                     ->error($e);
@@ -689,13 +701,14 @@ class TradeRefund extends Model
         }
         
         // 触发业务模型退款状态后置操作
-        if ($orderModel instanceof PayOrderAfter) {
+        if ($orderModel instanceof PayOrderAfter && $triggerStatus) {
             try {
                 $orderModel->setRefundStatusAfter(
                     $info,
                     $payInfo,
                     $result->isStatus(),
-                    $result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: '')
+                    $result->isStatus() ? ($update->refundAccount ?: '') : ($update->failRemark ?: ''),
+                    $triggerResult
                 );
             } catch (Throwable $e) {
                 TradeRefund::log("触发业务模型退款状态后置操作失败, id: {$info->id}, order_trade_no: {$info->orderTradeNo}")
