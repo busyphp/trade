@@ -23,7 +23,7 @@ trait TradeConfig
      */
     public function getTradeConfig($name, $default = null)
     {
-        return App::getInstance()->config->get('trade' . ($name ? ".{$name}" : ''), $default);
+        return App::getInstance()->config->get('busy-trade' . ($name ? ".{$name}" : ''), $default);
     }
     
     
