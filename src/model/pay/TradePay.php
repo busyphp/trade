@@ -125,7 +125,7 @@ class TradePay extends Model
         
         // 获取订单号前缀配置
         if (!$type = $this->getTradeConfig('pay_no_prefix', 1001)) {
-            throw new RuntimeException('请前往 config/trade.php 配置 pay_no_prefix');
+            throw new RuntimeException('请前往 config/busy-trade.php 配置 pay_no_prefix');
         }
         
         $this->startTrans($disabledTrans);
@@ -388,7 +388,7 @@ class TradePay extends Model
      */
     public function parseReturn(int $payType) : PayCreateSyncReturn
     {
-        $payType = trim($payType);
+        $payType = trim("$payType");
         $class   = $this->getTradeConfig("apis.{$payType}.create", '');
         if (!$class || !class_exists($class)) {
             throw new ClassNotFoundException('解析同步返回结果处理类不存在或未配置', $class);
@@ -699,9 +699,9 @@ class TradePay extends Model
      * @param string $orderTradeNo 业务订单号，不传则全部获取
      * @param array  $sort 排序和过滤
      * @param int    $defaultType 默认支付类型
-     * @return array
+     * @return array<string,array{type: string, alias: string, name: string, is_active: bool}>
      */
-    public function getPayTypes($orderTradeNo = '', $sort = [], $defaultType = null)
+    public function getPayTypes($orderTradeNo = '', $sort = [], $defaultType = null) : array
     {
         $orderTradeNo = trim($orderTradeNo);
         $excludes     = [];

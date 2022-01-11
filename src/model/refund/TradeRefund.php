@@ -153,11 +153,6 @@ class TradeRefund extends Model
      */
     public function joinRefund(string $orderTradeNo, int $orderType = 0, string $orderValue = '', string $refundRemark = '', float $price = 0, bool $mustRefund = false) : TradeRefundField
     {
-        // 获取订单号前缀配置
-        if (!$refundNoPrefix = $this->getTradeConfig('refund_no_prefix', 1002)) {
-            throw new RuntimeException('请前往config/trade.php 配置 refund_no_prefix');
-        }
-        
         $insert = TradeRefundField::init();
         TradePay::init()
             ->updateRefundAmountByCallback($orderTradeNo, new class($orderTradeNo, $orderType, $orderValue, $refundRemark, $price, $mustRefund, $insert, $this) implements TradeUpdateRefundAmountInterface {
@@ -231,7 +226,7 @@ class TradeRefund extends Model
                 {
                     // 获取订单号前缀
                     if (!$refundNoPrefix = $this->refundTarget->getTradeConfig('refund_no_prefix', 1002)) {
-                        throw new RuntimeException('未配置退款订单号前缀: refund_no_prefix');
+                        throw new RuntimeException('请前往config/busy-trade.php 配置 refund_no_prefix');
                     }
                     
                     // 传入的退款金额为0，则取实际支付金额
@@ -254,7 +249,7 @@ class TradeRefund extends Model
                     }
                     
                     // 统计累计退款金额是否大于实际支付金额
-                    $totalAmount = (float) $this->refundTarget->whereEntity(TradeRefundField::payId($tradePayInfo->id))
+                    $totalAmount = $this->refundTarget->whereEntity(TradeRefundField::payId($tradePayInfo->id))
                         ->whereEntity(TradeRefundField::status('<>', TradeRefund::REFUND_STATUS_FAIL))
                         ->sum(TradeRefundField::refundPrice());
                     if ($totalAmount + $this->price > $tradePayInfo->apiPrice) {
@@ -309,7 +304,7 @@ class TradeRefund extends Model
         $nicknameKey = $userParams->getNicknameField() ? (string) $userParams->getNicknameField() : '';
         $emailKey    = $userParams->getEmailField() ? (string) $userParams->getEmailField() : '';
         $callback    = $userParams->getAdminRefundOperateUserAttr();
-        foreach ($list as $i => $item) {
+        foreach ($list as $item) {
             $item->user = $userList[$item->userId] ?? null;
             
             $item->username = $item->user[$usernameKey] ?? '';
