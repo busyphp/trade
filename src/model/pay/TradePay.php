@@ -28,6 +28,7 @@ use Closure;
 use LogicException;
 use RangeException;
 use RuntimeException;
+use think\Container;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\exception\ClassNotFoundException;
@@ -156,9 +157,9 @@ class TradePay extends Model
      * @throws DataNotFoundException
      * @throws DbException
      */
-    public function getInfoByPayTradeNo($payTradeNo) : TradePayInfo
+    public function getInfoByPayTradeNo(string $payTradeNo) : TradePayInfo
     {
-        return $this->whereEntity(TradePayField::payTradeNo(trim((string) $payTradeNo)))
+        return $this->whereEntity(TradePayField::payTradeNo($payTradeNo))
             ->failException(true)
             ->findInfo();
     }
@@ -171,9 +172,9 @@ class TradePay extends Model
      * @throws DataNotFoundException
      * @throws DbException
      */
-    public function getInfoByOrderTradeNo($orderTradeNo) : TradePayInfo
+    public function getInfoByOrderTradeNo(string $orderTradeNo) : TradePayInfo
     {
-        return $this->whereEntity(TradePayField::orderTradeNo(trim((string) $orderTradeNo)))
+        return $this->whereEntity(TradePayField::orderTradeNo($orderTradeNo))
             ->failException(true)
             ->findInfo();
     }
@@ -181,12 +182,12 @@ class TradePay extends Model
     
     /**
      * 通过业务订单号获取已支付的订单
-     * @param $orderTradeNo
+     * @param string $orderTradeNo
      * @return TradePayInfo
      * @throws DataNotFoundException
      * @throws DbException
      */
-    public function getPayInfoByOrderTradeNo($orderTradeNo) : TradePayInfo
+    public function getPayInfoByOrderTradeNo(string $orderTradeNo) : TradePayInfo
     {
         return $this->whereEntity(TradePayField::payTime('>', 0))->getInfoByOrderTradeNo($orderTradeNo);
     }
@@ -194,11 +195,11 @@ class TradePay extends Model
     
     /**
      * 检测外部订单号是否已支付
-     * @param $orderTradeNo
+     * @param string $orderTradeNo
      * @return TradePayInfo|null
      * @throws DbException
      */
-    public function checkPayByOrderTradeNo($orderTradeNo) : ?TradePayInfo
+    public function checkPayByOrderTradeNo(string $orderTradeNo) : ?TradePayInfo
     {
         try {
             return $this->getPayInfoByOrderTradeNo($orderTradeNo);
@@ -210,15 +211,13 @@ class TradePay extends Model
     
     /**
      * 通过订单号获取支付需要的数据
-     * @param $orderTradeNo
+     * @param string $orderTradeNo
      * @return PayOrderPayData
      * @throws DbException
-     * @throws Throwable
      */
-    public function getPayData($orderTradeNo) : PayOrderPayData
+    public function getPayData(string $orderTradeNo) : PayOrderPayData
     {
-        $orderTradeNo = (string) $orderTradeNo;
-        $model        = $this->getOrderModel($orderTradeNo);
+        $model = $this->getOrderModel($orderTradeNo);
         
         if ($this->checkPayByOrderTradeNo($orderTradeNo)) {
             throw new VerifyException('该订单已支付，请勿重复支付', 'pay_success');
@@ -244,7 +243,7 @@ class TradePay extends Model
             throw new ClassNotImplementsException($class, $parentClass, "会员模型类");
         }
         
-        return call_user_func_array([$class, 'init'], []);
+        return Container::getInstance()->make($class, [], true);
     }
     
     
@@ -253,9 +252,8 @@ class TradePay extends Model
      * @param string $orderTradeNo 业务订单号
      * @return PayOrder
      */
-    public function getOrderModel($orderTradeNo) : PayOrder
+    public function getOrderModel(string $orderTradeNo) : PayOrder
     {
-        $orderTradeNo = trim((string) $orderTradeNo);
         if (!$orderTradeNo) {
             throw new ParamInvalidException('order_trade_no');
         }
@@ -275,7 +273,7 @@ class TradePay extends Model
             throw new ClassNotImplementsException($class, $parentClass, '订单模型类');
         }
         
-        return call_user_func_array([$class, 'init'], []);
+        return Container::getInstance()->make($class, [], true);
     }
     
     
@@ -326,7 +324,7 @@ class TradePay extends Model
             throw new ClassNotFoundException("该支付方式[ {$payType} ]未绑定支付接口", $class);
         }
         
-        $create = new $class();
+        $create = Container::getInstance()->make($class, [], true);
         if (!$create instanceof PayCreate) {
             throw new ClassNotImplementsException($class, PayCreate::class, '支付接口类');
         }
@@ -394,7 +392,7 @@ class TradePay extends Model
             throw new ClassNotFoundException('解析同步返回结果处理类不存在或未配置', $class);
         }
         
-        $class = new $class;
+        $class = Container::getInstance()->make($class, [], true);
         if (!$class instanceof PayCreate) {
             throw new ClassNotImplementsException($class, PayCreate::class, '同步结果解析类');
         }
@@ -453,7 +451,7 @@ class TradePay extends Model
             }
             
             // 实例化异步处理类
-            $notify = new $class();
+            $notify = Container::getInstance()->make($class, [], true);
             if (!$notify instanceof PayNotify) {
                 throw new ClassNotImplementsException($class, PayNotify::class, '异步处理程序');
             }
