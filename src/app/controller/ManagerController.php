@@ -90,8 +90,6 @@ class ManagerController extends PluginManager
     KEY `pay_pay_trade_no` (`pay_api_trade_no`),
     KEY `user_id` (`user_id`),
     KEY `status` (`status`),
-    KEY `queue_time` (`queue_time`),
-    KEY `status_2` (`status`,`queue_time`),
     KEY `order_type` (`order_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易退款表'",
         
